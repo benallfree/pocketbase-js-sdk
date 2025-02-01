@@ -11,7 +11,7 @@ export class SettingsService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async getAll(options?: CommonOptions): Promise<{ [key: string]: any }> {
+    getAll(options?: CommonOptions): { [key: string]: any } {
         options = Object.assign(
             {
                 method: "GET",
@@ -27,10 +27,10 @@ export class SettingsService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async update(
+    update(
         bodyParams?: { [key: string]: any } | FormData,
         options?: CommonOptions,
-    ): Promise<{ [key: string]: any }> {
+    ): { [key: string]: any } {
         options = Object.assign(
             {
                 method: "PATCH",
@@ -49,10 +49,7 @@ export class SettingsService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async testS3(
-        filesystem: string = "storage",
-        options?: CommonOptions,
-    ): Promise<boolean> {
+    testS3(filesystem: string = "storage", options?: CommonOptions): boolean {
         options = Object.assign(
             {
                 method: "POST",
@@ -63,7 +60,8 @@ export class SettingsService extends BaseService {
             options,
         );
 
-        return this.client.send("/api/settings/test/s3", options).then(() => true);
+        this.client.send("/api/settings/test/s3", options);
+        return true;
     }
 
     /**
@@ -76,12 +74,12 @@ export class SettingsService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async testEmail(
+    testEmail(
         collectionIdOrName: string,
         toEmail: string,
         emailTemplate: string,
         options?: CommonOptions,
-    ): Promise<boolean> {
+    ): boolean {
         options = Object.assign(
             {
                 method: "POST",
@@ -94,7 +92,8 @@ export class SettingsService extends BaseService {
             options,
         );
 
-        return this.client.send("/api/settings/test/email", options).then(() => true);
+        this.client.send("/api/settings/test/email", options);
+        return true;
     }
 
     /**
@@ -102,14 +101,14 @@ export class SettingsService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async generateAppleClientSecret(
+    generateAppleClientSecret(
         clientId: string,
         teamId: string,
         keyId: string,
         privateKey: string,
         duration: number,
         options?: CommonOptions,
-    ): Promise<appleClientSecret> {
+    ): appleClientSecret {
         options = Object.assign(
             {
                 method: "POST",

@@ -1,2 +1,2172 @@
-!function(e,t){"object"==typeof exports&&"undefined"!=typeof module?module.exports=t():"function"==typeof define&&define.amd?define(t):(e="undefined"!=typeof globalThis?globalThis:e||self).PocketBase=t()}(this,(function(){"use strict";class ClientResponseError extends Error{constructor(e){super("ClientResponseError"),this.url="",this.status=0,this.response={},this.isAbort=!1,this.originalError=null,Object.setPrototypeOf(this,ClientResponseError.prototype),null!==e&&"object"==typeof e&&(this.url="string"==typeof e.url?e.url:"",this.status="number"==typeof e.status?e.status:0,this.isAbort=!!e.isAbort,this.originalError=e.originalError,null!==e.response&&"object"==typeof e.response?this.response=e.response:null!==e.data&&"object"==typeof e.data?this.response=e.data:this.response={}),this.originalError||e instanceof ClientResponseError||(this.originalError=e),"undefined"!=typeof DOMException&&e instanceof DOMException&&(this.isAbort=!0),this.name="ClientResponseError "+this.status,this.message=this.response?.message,this.message||(this.isAbort?this.message="The request was autocancelled. You can find more info in https://github.com/pocketbase/js-sdk#auto-cancellation.":this.originalError?.cause?.message?.includes("ECONNREFUSED ::1")?this.message="Failed to connect to the PocketBase server. Try changing the SDK URL from localhost to 127.0.0.1 (https://github.com/pocketbase/js-sdk/issues/21).":this.message="Something went wrong while processing your request.")}get data(){return this.response}toJSON(){return{...this}}}const e=/^[\u0009\u0020-\u007e\u0080-\u00ff]+$/;function cookieSerialize(t,s,i){const n=Object.assign({},i||{}),r=n.encode||defaultEncode;if(!e.test(t))throw new TypeError("argument name is invalid");const o=r(s);if(o&&!e.test(o))throw new TypeError("argument val is invalid");let a=t+"="+o;if(null!=n.maxAge){const e=n.maxAge-0;if(isNaN(e)||!isFinite(e))throw new TypeError("option maxAge is invalid");a+="; Max-Age="+Math.floor(e)}if(n.domain){if(!e.test(n.domain))throw new TypeError("option domain is invalid");a+="; Domain="+n.domain}if(n.path){if(!e.test(n.path))throw new TypeError("option path is invalid");a+="; Path="+n.path}if(n.expires){if(!function isDate(e){return"[object Date]"===Object.prototype.toString.call(e)||e instanceof Date}(n.expires)||isNaN(n.expires.valueOf()))throw new TypeError("option expires is invalid");a+="; Expires="+n.expires.toUTCString()}if(n.httpOnly&&(a+="; HttpOnly"),n.secure&&(a+="; Secure"),n.priority){switch("string"==typeof n.priority?n.priority.toLowerCase():n.priority){case"low":a+="; Priority=Low";break;case"medium":a+="; Priority=Medium";break;case"high":a+="; Priority=High";break;default:throw new TypeError("option priority is invalid")}}if(n.sameSite){switch("string"==typeof n.sameSite?n.sameSite.toLowerCase():n.sameSite){case!0:a+="; SameSite=Strict";break;case"lax":a+="; SameSite=Lax";break;case"strict":a+="; SameSite=Strict";break;case"none":a+="; SameSite=None";break;default:throw new TypeError("option sameSite is invalid")}}return a}function defaultDecode(e){return-1!==e.indexOf("%")?decodeURIComponent(e):e}function defaultEncode(e){return encodeURIComponent(e)}const t="undefined"!=typeof navigator&&"ReactNative"===navigator.product||"undefined"!=typeof global&&global.HermesInternal;let s;function getTokenPayload(e){if(e)try{const t=decodeURIComponent(s(e.split(".")[1]).split("").map((function(e){return"%"+("00"+e.charCodeAt(0).toString(16)).slice(-2)})).join(""));return JSON.parse(t)||{}}catch(e){}return{}}function isTokenExpired(e,t=0){let s=getTokenPayload(e);return!(Object.keys(s).length>0&&(!s.exp||s.exp-t>Date.now()/1e3))}s="function"!=typeof atob||t?e=>{let t=String(e).replace(/=+$/,"");if(t.length%4==1)throw new Error("'atob' failed: The string to be decoded is not correctly encoded.");for(var s,i,n=0,r=0,o="";i=t.charAt(r++);~i&&(s=n%4?64*s+i:i,n++%4)?o+=String.fromCharCode(255&s>>(-2*n&6)):0)i="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=".indexOf(i);return o}:atob;const i="pb_auth";class BaseAuthStore{constructor(){this.baseToken="",this.baseModel=null,this._onChangeCallbacks=[]}get token(){return this.baseToken}get record(){return this.baseModel}get model(){return this.baseModel}get isValid(){return!isTokenExpired(this.token)}get isSuperuser(){let e=getTokenPayload(this.token);return"auth"==e.type&&("_superusers"==this.record?.collectionName||!this.record?.collectionName&&"pbc_3142635823"==e.collectionId)}get isAdmin(){return console.warn("Please replace pb.authStore.isAdmin with pb.authStore.isSuperuser OR simply check the value of pb.authStore.record?.collectionName"),this.isSuperuser}get isAuthRecord(){return console.warn("Please replace pb.authStore.isAuthRecord with !pb.authStore.isSuperuser OR simply check the value of pb.authStore.record?.collectionName"),"auth"==getTokenPayload(this.token).type&&!this.isSuperuser}save(e,t){this.baseToken=e||"",this.baseModel=t||null,this.triggerChange()}clear(){this.baseToken="",this.baseModel=null,this.triggerChange()}loadFromCookie(e,t=i){const s=function cookieParse(e,t){const s={};if("string"!=typeof e)return s;const i=Object.assign({},{}).decode||defaultDecode;let n=0;for(;n<e.length;){const t=e.indexOf("=",n);if(-1===t)break;let r=e.indexOf(";",n);if(-1===r)r=e.length;else if(r<t){n=e.lastIndexOf(";",t-1)+1;continue}const o=e.slice(n,t).trim();if(void 0===s[o]){let n=e.slice(t+1,r).trim();34===n.charCodeAt(0)&&(n=n.slice(1,-1));try{s[o]=i(n)}catch(e){s[o]=n}}n=r+1}return s}(e||"")[t]||"";let n={};try{n=JSON.parse(s),(null===typeof n||"object"!=typeof n||Array.isArray(n))&&(n={})}catch(e){}this.save(n.token||"",n.record||n.model||null)}exportToCookie(e,t=i){const s={secure:!0,sameSite:!0,httpOnly:!0,path:"/"},n=getTokenPayload(this.token);s.expires=n?.exp?new Date(1e3*n.exp):new Date("1970-01-01"),e=Object.assign({},s,e);const r={token:this.token,record:this.record?JSON.parse(JSON.stringify(this.record)):null};let o=cookieSerialize(t,JSON.stringify(r),e);const a="undefined"!=typeof Blob?new Blob([o]).size:o.length;if(r.record&&a>4096){r.record={id:r.record?.id,email:r.record?.email};const s=["collectionId","collectionName","verified"];for(const e in this.record)s.includes(e)&&(r.record[e]=this.record[e]);o=cookieSerialize(t,JSON.stringify(r),e)}return o}onChange(e,t=!1){return this._onChangeCallbacks.push(e),t&&e(this.token,this.record),()=>{for(let t=this._onChangeCallbacks.length-1;t>=0;t--)if(this._onChangeCallbacks[t]==e)return delete this._onChangeCallbacks[t],void this._onChangeCallbacks.splice(t,1)}}triggerChange(){for(const e of this._onChangeCallbacks)e&&e(this.token,this.record)}}class LocalAuthStore extends BaseAuthStore{constructor(e="pocketbase_auth"){super(),this.storageFallback={},this.storageKey=e,this._bindStorageEvent()}get token(){return(this._storageGet(this.storageKey)||{}).token||""}get record(){const e=this._storageGet(this.storageKey)||{};return e.record||e.model||null}get model(){return this.record}save(e,t){this._storageSet(this.storageKey,{token:e,record:t}),super.save(e,t)}clear(){this._storageRemove(this.storageKey),super.clear()}_storageGet(e){if("undefined"!=typeof window&&window?.localStorage){const t=window.localStorage.getItem(e)||"";try{return JSON.parse(t)}catch(e){return t}}return this.storageFallback[e]}_storageSet(e,t){if("undefined"!=typeof window&&window?.localStorage){let s=t;"string"!=typeof t&&(s=JSON.stringify(t)),window.localStorage.setItem(e,s)}else this.storageFallback[e]=t}_storageRemove(e){"undefined"!=typeof window&&window?.localStorage&&window.localStorage?.removeItem(e),delete this.storageFallback[e]}_bindStorageEvent(){"undefined"!=typeof window&&window?.localStorage&&window.addEventListener&&window.addEventListener("storage",(e=>{if(e.key!=this.storageKey)return;const t=this._storageGet(this.storageKey)||{};super.save(t.token||"",t.record||t.model||null)}))}}class BaseService{constructor(e){this.client=e}}class SettingsService extends BaseService{async getAll(e){return e=Object.assign({method:"GET"},e),this.client.send("/api/settings",e)}async update(e,t){return t=Object.assign({method:"PATCH",body:e},t),this.client.send("/api/settings",t)}async testS3(e="storage",t){return t=Object.assign({method:"POST",body:{filesystem:e}},t),this.client.send("/api/settings/test/s3",t).then((()=>!0))}async testEmail(e,t,s,i){return i=Object.assign({method:"POST",body:{email:t,template:s,collection:e}},i),this.client.send("/api/settings/test/email",i).then((()=>!0))}async generateAppleClientSecret(e,t,s,i,n,r){return r=Object.assign({method:"POST",body:{clientId:e,teamId:t,keyId:s,privateKey:i,duration:n}},r),this.client.send("/api/settings/apple/generate-client-secret",r)}}const n=["requestKey","$cancelKey","$autoCancel","fetch","headers","body","query","params","cache","credentials","headers","integrity","keepalive","method","mode","redirect","referrer","referrerPolicy","signal","window"];function normalizeUnknownQueryParams(e){if(e){e.query=e.query||{};for(let t in e)n.includes(t)||(e.query[t]=e[t],delete e[t])}}function serializeQueryParams(e){const t=[];for(const s in e){if(null===e[s]||void 0===e[s])continue;const i=e[s],n=encodeURIComponent(s);if(Array.isArray(i))for(const e of i)t.push(n+"="+encodeURIComponent(e));else i instanceof Date?t.push(n+"="+encodeURIComponent(i.toISOString())):null!==typeof i&&"object"==typeof i?t.push(n+"="+encodeURIComponent(JSON.stringify(i))):t.push(n+"="+encodeURIComponent(i))}return t.join("&")}class RealtimeService extends BaseService{constructor(){super(...arguments),this.clientId="",this.eventSource=null,this.subscriptions={},this.lastSentSubscriptions=[],this.maxConnectTimeout=15e3,this.reconnectAttempts=0,this.maxReconnectAttempts=1/0,this.predefinedReconnectIntervals=[200,300,500,1e3,1200,1500,2e3],this.pendingConnects=[]}get isConnected(){return!!this.eventSource&&!!this.clientId&&!this.pendingConnects.length}async subscribe(e,t,s){if(!e)throw new Error("topic must be set.");let i=e;if(s){normalizeUnknownQueryParams(s=Object.assign({},s));const e="options="+encodeURIComponent(JSON.stringify({query:s.query,headers:s.headers}));i+=(i.includes("?")?"&":"?")+e}const listener=function(e){const s=e;let i;try{i=JSON.parse(s?.data)}catch{}t(i||{})};return this.subscriptions[i]||(this.subscriptions[i]=[]),this.subscriptions[i].push(listener),this.isConnected?1===this.subscriptions[i].length?await this.submitSubscriptions():this.eventSource?.addEventListener(i,listener):await this.connect(),async()=>this.unsubscribeByTopicAndListener(e,listener)}async unsubscribe(e){let t=!1;if(e){const s=this.getSubscriptionsByTopic(e);for(let e in s)if(this.hasSubscriptionListeners(e)){for(let t of this.subscriptions[e])this.eventSource?.removeEventListener(e,t);delete this.subscriptions[e],t||(t=!0)}}else this.subscriptions={};this.hasSubscriptionListeners()?t&&await this.submitSubscriptions():this.disconnect()}async unsubscribeByPrefix(e){let t=!1;for(let s in this.subscriptions)if((s+"?").startsWith(e)){t=!0;for(let e of this.subscriptions[s])this.eventSource?.removeEventListener(s,e);delete this.subscriptions[s]}t&&(this.hasSubscriptionListeners()?await this.submitSubscriptions():this.disconnect())}async unsubscribeByTopicAndListener(e,t){let s=!1;const i=this.getSubscriptionsByTopic(e);for(let e in i){if(!Array.isArray(this.subscriptions[e])||!this.subscriptions[e].length)continue;let i=!1;for(let s=this.subscriptions[e].length-1;s>=0;s--)this.subscriptions[e][s]===t&&(i=!0,delete this.subscriptions[e][s],this.subscriptions[e].splice(s,1),this.eventSource?.removeEventListener(e,t));i&&(this.subscriptions[e].length||delete this.subscriptions[e],s||this.hasSubscriptionListeners(e)||(s=!0))}this.hasSubscriptionListeners()?s&&await this.submitSubscriptions():this.disconnect()}hasSubscriptionListeners(e){if(this.subscriptions=this.subscriptions||{},e)return!!this.subscriptions[e]?.length;for(let e in this.subscriptions)if(this.subscriptions[e]?.length)return!0;return!1}async submitSubscriptions(){if(this.clientId)return this.addAllSubscriptionListeners(),this.lastSentSubscriptions=this.getNonEmptySubscriptionKeys(),this.client.send("/api/realtime",{method:"POST",body:{clientId:this.clientId,subscriptions:this.lastSentSubscriptions},requestKey:this.getSubscriptionsCancelKey()}).catch((e=>{if(!e?.isAbort)throw e}))}getSubscriptionsCancelKey(){return"realtime_"+this.clientId}getSubscriptionsByTopic(e){const t={};e=e.includes("?")?e:e+"?";for(let s in this.subscriptions)(s+"?").startsWith(e)&&(t[s]=this.subscriptions[s]);return t}getNonEmptySubscriptionKeys(){const e=[];for(let t in this.subscriptions)this.subscriptions[t].length&&e.push(t);return e}addAllSubscriptionListeners(){if(this.eventSource){this.removeAllSubscriptionListeners();for(let e in this.subscriptions)for(let t of this.subscriptions[e])this.eventSource.addEventListener(e,t)}}removeAllSubscriptionListeners(){if(this.eventSource)for(let e in this.subscriptions)for(let t of this.subscriptions[e])this.eventSource.removeEventListener(e,t)}async connect(){if(!(this.reconnectAttempts>0))return new Promise(((e,t)=>{this.pendingConnects.push({resolve:e,reject:t}),this.pendingConnects.length>1||this.initConnect()}))}initConnect(){this.disconnect(!0),clearTimeout(this.connectTimeoutId),this.connectTimeoutId=setTimeout((()=>{this.connectErrorHandler(new Error("EventSource connect took too long."))}),this.maxConnectTimeout),this.eventSource=new EventSource(this.client.buildURL("/api/realtime")),this.eventSource.onerror=e=>{this.connectErrorHandler(new Error("Failed to establish realtime connection."))},this.eventSource.addEventListener("PB_CONNECT",(e=>{const t=e;this.clientId=t?.lastEventId,this.submitSubscriptions().then((async()=>{let e=3;for(;this.hasUnsentSubscriptions()&&e>0;)e--,await this.submitSubscriptions()})).then((()=>{for(let e of this.pendingConnects)e.resolve();this.pendingConnects=[],this.reconnectAttempts=0,clearTimeout(this.reconnectTimeoutId),clearTimeout(this.connectTimeoutId);const t=this.getSubscriptionsByTopic("PB_CONNECT");for(let s in t)for(let i of t[s])i(e)})).catch((e=>{this.clientId="",this.connectErrorHandler(e)}))}))}hasUnsentSubscriptions(){const e=this.getNonEmptySubscriptionKeys();if(e.length!=this.lastSentSubscriptions.length)return!0;for(const t of e)if(!this.lastSentSubscriptions.includes(t))return!0;return!1}connectErrorHandler(e){if(clearTimeout(this.connectTimeoutId),clearTimeout(this.reconnectTimeoutId),!this.clientId&&!this.reconnectAttempts||this.reconnectAttempts>this.maxReconnectAttempts){for(let t of this.pendingConnects)t.reject(new ClientResponseError(e));return this.pendingConnects=[],void this.disconnect()}this.disconnect(!0);const t=this.predefinedReconnectIntervals[this.reconnectAttempts]||this.predefinedReconnectIntervals[this.predefinedReconnectIntervals.length-1];this.reconnectAttempts++,this.reconnectTimeoutId=setTimeout((()=>{this.initConnect()}),t)}disconnect(e=!1){if(this.clientId&&this.onDisconnect&&this.onDisconnect(Object.keys(this.subscriptions)),clearTimeout(this.connectTimeoutId),clearTimeout(this.reconnectTimeoutId),this.removeAllSubscriptionListeners(),this.client.cancelRequest(this.getSubscriptionsCancelKey()),this.eventSource?.close(),this.eventSource=null,this.clientId="",!e){this.reconnectAttempts=0;for(let e of this.pendingConnects)e.resolve();this.pendingConnects=[]}}}class CrudService extends BaseService{decode(e){return e}async getFullList(e,t){if("number"==typeof e)return this._getFullList(e,t);let s=500;return(t=Object.assign({},e,t)).batch&&(s=t.batch,delete t.batch),this._getFullList(s,t)}async getList(e=1,t=30,s){return(s=Object.assign({method:"GET"},s)).query=Object.assign({page:e,perPage:t},s.query),this.client.send(this.baseCrudPath,s).then((e=>(e.items=e.items?.map((e=>this.decode(e)))||[],e)))}async getFirstListItem(e,t){return(t=Object.assign({requestKey:"one_by_filter_"+this.baseCrudPath+"_"+e},t)).query=Object.assign({filter:e,skipTotal:1},t.query),this.getList(1,1,t).then((e=>{if(!e?.items?.length)throw new ClientResponseError({status:404,response:{code:404,message:"The requested resource wasn't found.",data:{}}});return e.items[0]}))}async getOne(e,t){if(!e)throw new ClientResponseError({url:this.client.buildURL(this.baseCrudPath+"/"),status:404,response:{code:404,message:"Missing required record id.",data:{}}});return t=Object.assign({method:"GET"},t),this.client.send(this.baseCrudPath+"/"+encodeURIComponent(e),t).then((e=>this.decode(e)))}async create(e,t){return t=Object.assign({method:"POST",body:e},t),this.client.send(this.baseCrudPath,t).then((e=>this.decode(e)))}async update(e,t,s){return s=Object.assign({method:"PATCH",body:t},s),this.client.send(this.baseCrudPath+"/"+encodeURIComponent(e),s).then((e=>this.decode(e)))}async delete(e,t){return t=Object.assign({method:"DELETE"},t),this.client.send(this.baseCrudPath+"/"+encodeURIComponent(e),t).then((()=>!0))}_getFullList(e=500,t){(t=t||{}).query=Object.assign({skipTotal:1},t.query);let s=[],request=async i=>this.getList(i,e||500,t).then((e=>{const t=e.items;return s=s.concat(t),t.length==e.perPage?request(i+1):s}));return request(1)}}function normalizeLegacyOptionsArgs(e,t,s,i){const n=void 0!==i;return n||void 0!==s?n?(console.warn(e),t.body=Object.assign({},t.body,s),t.query=Object.assign({},t.query,i),t):Object.assign(t,s):t}function resetAutoRefresh(e){e._resetAutoRefresh?.()}class RecordService extends CrudService{constructor(e,t){super(e),this.collectionIdOrName=t}get baseCrudPath(){return this.baseCollectionPath+"/records"}get baseCollectionPath(){return"/api/collections/"+encodeURIComponent(this.collectionIdOrName)}get isSuperusers(){return"_superusers"==this.collectionIdOrName||"_pbc_2773867675"==this.collectionIdOrName}async subscribe(e,t,s){if(!e)throw new Error("Missing topic.");if(!t)throw new Error("Missing subscription callback.");return this.client.realtime.subscribe(this.collectionIdOrName+"/"+e,t,s)}async unsubscribe(e){return e?this.client.realtime.unsubscribe(this.collectionIdOrName+"/"+e):this.client.realtime.unsubscribeByPrefix(this.collectionIdOrName)}async getFullList(e,t){if("number"==typeof e)return super.getFullList(e,t);const s=Object.assign({},e,t);return super.getFullList(s)}async getList(e=1,t=30,s){return super.getList(e,t,s)}async getFirstListItem(e,t){return super.getFirstListItem(e,t)}async getOne(e,t){return super.getOne(e,t)}async create(e,t){return super.create(e,t)}async update(e,t,s){return super.update(e,t,s).then((e=>{if(this.client.authStore.record?.id===e?.id&&(this.client.authStore.record?.collectionId===this.collectionIdOrName||this.client.authStore.record?.collectionName===this.collectionIdOrName)){let t=Object.assign({},this.client.authStore.record.expand),s=Object.assign({},this.client.authStore.record,e);t&&(s.expand=Object.assign(t,e.expand)),this.client.authStore.save(this.client.authStore.token,s)}return e}))}async delete(e,t){return super.delete(e,t).then((t=>(!t||this.client.authStore.record?.id!==e||this.client.authStore.record?.collectionId!==this.collectionIdOrName&&this.client.authStore.record?.collectionName!==this.collectionIdOrName||this.client.authStore.clear(),t)))}authResponse(e){const t=this.decode(e?.record||{});return this.client.authStore.save(e?.token,t),Object.assign({},e,{token:e?.token||"",record:t})}async listAuthMethods(e){return e=Object.assign({method:"GET",fields:"mfa,otp,password,oauth2"},e),this.client.send(this.baseCollectionPath+"/auth-methods",e)}async authWithPassword(e,t,s){let i;s=Object.assign({method:"POST",body:{identity:e,password:t}},s),this.isSuperusers&&(i=s.autoRefreshThreshold,delete s.autoRefreshThreshold,s.autoRefresh||resetAutoRefresh(this.client));let n=await this.client.send(this.baseCollectionPath+"/auth-with-password",s);return n=this.authResponse(n),i&&this.isSuperusers&&function registerAutoRefresh(e,t,s,i){resetAutoRefresh(e);const n=e.beforeSend,r=e.authStore.record,o=e.authStore.onChange(((t,s)=>{(!t||s?.id!=r?.id||(s?.collectionId||r?.collectionId)&&s?.collectionId!=r?.collectionId)&&resetAutoRefresh(e)}));e._resetAutoRefresh=function(){o(),e.beforeSend=n,delete e._resetAutoRefresh},e.beforeSend=async(r,o)=>{const a=e.authStore.token;if(o.query?.autoRefresh)return n?n(r,o):{url:r,sendOptions:o};let c=e.authStore.isValid;if(c&&isTokenExpired(e.authStore.token,t))try{await s()}catch(e){c=!1}c||await i();const l=o.headers||{};for(let t in l)if("authorization"==t.toLowerCase()&&a==l[t]&&e.authStore.token){l[t]=e.authStore.token;break}return o.headers=l,n?n(r,o):{url:r,sendOptions:o}}}(this.client,i,(()=>this.authRefresh({autoRefresh:!0})),(()=>this.authWithPassword(e,t,Object.assign({autoRefresh:!0},s)))),n}async authWithOAuth2Code(e,t,s,i,n,r,o){let a={method:"POST",body:{provider:e,code:t,codeVerifier:s,redirectURL:i,createData:n}};return a=normalizeLegacyOptionsArgs("This form of authWithOAuth2Code(provider, code, codeVerifier, redirectURL, createData?, body?, query?) is deprecated. Consider replacing it with authWithOAuth2Code(provider, code, codeVerifier, redirectURL, createData?, options?).",a,r,o),this.client.send(this.baseCollectionPath+"/auth-with-oauth2",a).then((e=>this.authResponse(e)))}authWithOAuth2(...e){if(e.length>1||"string"==typeof e?.[0])return console.warn("PocketBase: This form of authWithOAuth2() is deprecated and may get removed in the future. Please replace with authWithOAuth2Code() OR use the authWithOAuth2() realtime form as shown in https://pocketbase.io/docs/authentication/#oauth2-integration."),this.authWithOAuth2Code(e?.[0]||"",e?.[1]||"",e?.[2]||"",e?.[3]||"",e?.[4]||{},e?.[5]||{},e?.[6]||{});const t=e?.[0]||{};let s=null;t.urlCallback||(s=openBrowserPopup(void 0));const i=new RealtimeService(this.client);function cleanup(){s?.close(),i.unsubscribe()}const n={},r=t.requestKey;return r&&(n.requestKey=r),this.listAuthMethods(n).then((e=>{const n=e.oauth2.providers.find((e=>e.name===t.provider));if(!n)throw new ClientResponseError(new Error(`Missing or invalid provider "${t.provider}".`));const o=this.client.buildURL("/api/oauth2-redirect"),a=r?this.client.cancelControllers?.[r]:void 0;return a&&(a.signal.onabort=()=>{cleanup()}),new Promise((async(e,r)=>{try{await i.subscribe("@oauth2",(async s=>{const c=i.clientId;try{if(!s.state||c!==s.state)throw new Error("State parameters don't match.");if(s.error||!s.code)throw new Error("OAuth2 redirect error or missing code: "+s.error);const i=Object.assign({},t);delete i.provider,delete i.scopes,delete i.createData,delete i.urlCallback,a?.signal?.onabort&&(a.signal.onabort=null);const r=await this.authWithOAuth2Code(n.name,s.code,n.codeVerifier,o,t.createData,i);e(r)}catch(e){r(new ClientResponseError(e))}cleanup()}));const c={state:i.clientId};t.scopes?.length&&(c.scope=t.scopes.join(" "));const l=this._replaceQueryParams(n.authURL+o,c);let h=t.urlCallback||function(e){s?s.location.href=e:s=openBrowserPopup(e)};await h(l)}catch(e){cleanup(),r(new ClientResponseError(e))}}))})).catch((e=>{throw cleanup(),e}))}async authRefresh(e,t){let s={method:"POST"};return s=normalizeLegacyOptionsArgs("This form of authRefresh(body?, query?) is deprecated. Consider replacing it with authRefresh(options?).",s,e,t),this.client.send(this.baseCollectionPath+"/auth-refresh",s).then((e=>this.authResponse(e)))}async requestPasswordReset(e,t,s){let i={method:"POST",body:{email:e}};return i=normalizeLegacyOptionsArgs("This form of requestPasswordReset(email, body?, query?) is deprecated. Consider replacing it with requestPasswordReset(email, options?).",i,t,s),this.client.send(this.baseCollectionPath+"/request-password-reset",i).then((()=>!0))}async confirmPasswordReset(e,t,s,i,n){let r={method:"POST",body:{token:e,password:t,passwordConfirm:s}};return r=normalizeLegacyOptionsArgs("This form of confirmPasswordReset(token, password, passwordConfirm, body?, query?) is deprecated. Consider replacing it with confirmPasswordReset(token, password, passwordConfirm, options?).",r,i,n),this.client.send(this.baseCollectionPath+"/confirm-password-reset",r).then((()=>!0))}async requestVerification(e,t,s){let i={method:"POST",body:{email:e}};return i=normalizeLegacyOptionsArgs("This form of requestVerification(email, body?, query?) is deprecated. Consider replacing it with requestVerification(email, options?).",i,t,s),this.client.send(this.baseCollectionPath+"/request-verification",i).then((()=>!0))}async confirmVerification(e,t,s){let i={method:"POST",body:{token:e}};return i=normalizeLegacyOptionsArgs("This form of confirmVerification(token, body?, query?) is deprecated. Consider replacing it with confirmVerification(token, options?).",i,t,s),this.client.send(this.baseCollectionPath+"/confirm-verification",i).then((()=>{const t=getTokenPayload(e),s=this.client.authStore.record;return s&&!s.verified&&s.id===t.id&&s.collectionId===t.collectionId&&(s.verified=!0,this.client.authStore.save(this.client.authStore.token,s)),!0}))}async requestEmailChange(e,t,s){let i={method:"POST",body:{newEmail:e}};return i=normalizeLegacyOptionsArgs("This form of requestEmailChange(newEmail, body?, query?) is deprecated. Consider replacing it with requestEmailChange(newEmail, options?).",i,t,s),this.client.send(this.baseCollectionPath+"/request-email-change",i).then((()=>!0))}async confirmEmailChange(e,t,s,i){let n={method:"POST",body:{token:e,password:t}};return n=normalizeLegacyOptionsArgs("This form of confirmEmailChange(token, password, body?, query?) is deprecated. Consider replacing it with confirmEmailChange(token, password, options?).",n,s,i),this.client.send(this.baseCollectionPath+"/confirm-email-change",n).then((()=>{const t=getTokenPayload(e),s=this.client.authStore.record;return s&&s.id===t.id&&s.collectionId===t.collectionId&&this.client.authStore.clear(),!0}))}async listExternalAuths(e,t){return this.client.collection("_externalAuths").getFullList(Object.assign({},t,{filter:this.client.filter("recordRef = {:id}",{id:e})}))}async unlinkExternalAuth(e,t,s){const i=await this.client.collection("_externalAuths").getFirstListItem(this.client.filter("recordRef = {:recordId} && provider = {:provider}",{recordId:e,provider:t}));return this.client.collection("_externalAuths").delete(i.id,s).then((()=>!0))}async requestOTP(e,t){return t=Object.assign({method:"POST",body:{email:e}},t),this.client.send(this.baseCollectionPath+"/request-otp",t)}async authWithOTP(e,t,s){return s=Object.assign({method:"POST",body:{otpId:e,password:t}},s),this.client.send(this.baseCollectionPath+"/auth-with-otp",s).then((e=>this.authResponse(e)))}async impersonate(e,t,s){(s=Object.assign({method:"POST",body:{duration:t}},s)).headers=s.headers||{},s.headers.Authorization||(s.headers.Authorization=this.client.authStore.token);const i=new Client(this.client.baseURL,new BaseAuthStore,this.client.lang),n=await i.send(this.baseCollectionPath+"/impersonate/"+encodeURIComponent(e),s);return i.authStore.save(n?.token,this.decode(n?.record||{})),i}_replaceQueryParams(e,t={}){let s=e,i="";e.indexOf("?")>=0&&(s=e.substring(0,e.indexOf("?")),i=e.substring(e.indexOf("?")+1));const n={},r=i.split("&");for(const e of r){if(""==e)continue;const t=e.split("=");n[decodeURIComponent(t[0].replace(/\+/g," "))]=decodeURIComponent((t[1]||"").replace(/\+/g," "))}for(let e in t)t.hasOwnProperty(e)&&(null==t[e]?delete n[e]:n[e]=t[e]);i="";for(let e in n)n.hasOwnProperty(e)&&(""!=i&&(i+="&"),i+=encodeURIComponent(e.replace(/%20/g,"+"))+"="+encodeURIComponent(n[e].replace(/%20/g,"+")));return""!=i?s+"?"+i:s}}function openBrowserPopup(e){if("undefined"==typeof window||!window?.open)throw new ClientResponseError(new Error("Not in a browser context - please pass a custom urlCallback function."));let t=1024,s=768,i=window.innerWidth,n=window.innerHeight;t=t>i?i:t,s=s>n?n:s;let r=i/2-t/2,o=n/2-s/2;return window.open(e,"popup_window","width="+t+",height="+s+",top="+o+",left="+r+",resizable,menubar=no")}class CollectionService extends CrudService{get baseCrudPath(){return"/api/collections"}async import(e,t=!1,s){return s=Object.assign({method:"PUT",body:{collections:e,deleteMissing:t}},s),this.client.send(this.baseCrudPath+"/import",s).then((()=>!0))}async getScaffolds(e){return e=Object.assign({method:"GET"},e),this.client.send(this.baseCrudPath+"/meta/scaffolds",e)}async truncate(e,t){return t=Object.assign({method:"DELETE"},t),this.client.send(this.baseCrudPath+"/"+encodeURIComponent(e)+"/truncate",t).then((()=>!0))}}class LogService extends BaseService{async getList(e=1,t=30,s){return(s=Object.assign({method:"GET"},s)).query=Object.assign({page:e,perPage:t},s.query),this.client.send("/api/logs",s)}async getOne(e,t){if(!e)throw new ClientResponseError({url:this.client.buildURL("/api/logs/"),status:404,response:{code:404,message:"Missing required log id.",data:{}}});return t=Object.assign({method:"GET"},t),this.client.send("/api/logs/"+encodeURIComponent(e),t)}async getStats(e){return e=Object.assign({method:"GET"},e),this.client.send("/api/logs/stats",e)}}class HealthService extends BaseService{async check(e){return e=Object.assign({method:"GET"},e),this.client.send("/api/health",e)}}class FileService extends BaseService{getUrl(e,t,s={}){return console.warn("Please replace pb.files.getUrl() with pb.files.getURL()"),this.getURL(e,t,s)}getURL(e,t,s={}){if(!t||!e?.id||!e?.collectionId&&!e?.collectionName)return"";const i=[];i.push("api"),i.push("files"),i.push(encodeURIComponent(e.collectionId||e.collectionName)),i.push(encodeURIComponent(e.id)),i.push(encodeURIComponent(t));let n=this.client.buildURL(i.join("/"));if(Object.keys(s).length){!1===s.download&&delete s.download;const e=new URLSearchParams(s);n+=(n.includes("?")?"&":"?")+e}return n}async getToken(e){return e=Object.assign({method:"POST"},e),this.client.send("/api/files/token",e).then((e=>e?.token||""))}}class BackupService extends BaseService{async getFullList(e){return e=Object.assign({method:"GET"},e),this.client.send("/api/backups",e)}async create(e,t){return t=Object.assign({method:"POST",body:{name:e}},t),this.client.send("/api/backups",t).then((()=>!0))}async upload(e,t){return t=Object.assign({method:"POST",body:e},t),this.client.send("/api/backups/upload",t).then((()=>!0))}async delete(e,t){return t=Object.assign({method:"DELETE"},t),this.client.send(`/api/backups/${encodeURIComponent(e)}`,t).then((()=>!0))}async restore(e,t){return t=Object.assign({method:"POST"},t),this.client.send(`/api/backups/${encodeURIComponent(e)}/restore`,t).then((()=>!0))}getDownloadUrl(e,t){return console.warn("Please replace pb.backups.getDownloadUrl() with pb.backups.getDownloadURL()"),this.getDownloadURL(e,t)}getDownloadURL(e,t){return this.client.buildURL(`/api/backups/${encodeURIComponent(t)}?token=${encodeURIComponent(e)}`)}}class CronService extends BaseService{async getFullList(e){return e=Object.assign({method:"GET"},e),this.client.send("/api/crons",e)}async run(e,t){return t=Object.assign({method:"POST"},t),this.client.send(`/api/crons/${encodeURIComponent(e)}`,t).then((()=>!0))}}function isFile(e){return"undefined"!=typeof Blob&&e instanceof Blob||"undefined"!=typeof File&&e instanceof File||null!==e&&"object"==typeof e&&e.uri&&("undefined"!=typeof navigator&&"ReactNative"===navigator.product||"undefined"!=typeof global&&global.HermesInternal)}function isFormData(e){return e&&("FormData"===e.constructor.name||"undefined"!=typeof FormData&&e instanceof FormData)}function hasFileField(e){for(const t in e){const s=Array.isArray(e[t])?e[t]:[e[t]];for(const e of s)if(isFile(e))return!0}return!1}const r=/^[\-\.\d]+$/;function inferFormDataValue(e){if("string"!=typeof e)return e;if("true"==e)return!0;if("false"==e)return!1;if(("-"===e[0]||e[0]>="0"&&e[0]<="9")&&r.test(e)){let t=+e;if(""+t===e)return t}return e}class BatchService extends BaseService{constructor(){super(...arguments),this.requests=[],this.subs={}}collection(e){return this.subs[e]||(this.subs[e]=new SubBatchService(this.requests,e)),this.subs[e]}async send(e){const t=new FormData,s=[];for(let e=0;e<this.requests.length;e++){const i=this.requests[e];if(s.push({method:i.method,url:i.url,headers:i.headers,body:i.json}),i.files)for(let s in i.files){const n=i.files[s]||[];for(let i of n)t.append("requests."+e+"."+s,i)}}return t.append("@jsonPayload",JSON.stringify({requests:s})),e=Object.assign({method:"POST",body:t},e),this.client.send("/api/batch",e)}}class SubBatchService{constructor(e,t){this.requests=[],this.requests=e,this.collectionIdOrName=t}upsert(e,t){t=Object.assign({body:e||{}},t);const s={method:"PUT",url:"/api/collections/"+encodeURIComponent(this.collectionIdOrName)+"/records"};this.prepareRequest(s,t),this.requests.push(s)}create(e,t){t=Object.assign({body:e||{}},t);const s={method:"POST",url:"/api/collections/"+encodeURIComponent(this.collectionIdOrName)+"/records"};this.prepareRequest(s,t),this.requests.push(s)}update(e,t,s){s=Object.assign({body:t||{}},s);const i={method:"PATCH",url:"/api/collections/"+encodeURIComponent(this.collectionIdOrName)+"/records/"+encodeURIComponent(e)};this.prepareRequest(i,s),this.requests.push(i)}delete(e,t){t=Object.assign({},t);const s={method:"DELETE",url:"/api/collections/"+encodeURIComponent(this.collectionIdOrName)+"/records/"+encodeURIComponent(e)};this.prepareRequest(s,t),this.requests.push(s)}prepareRequest(e,t){if(normalizeUnknownQueryParams(t),e.headers=t.headers,e.json={},e.files={},void 0!==t.query){const s=serializeQueryParams(t.query);s&&(e.url+=(e.url.includes("?")?"&":"?")+s)}let s=t.body;isFormData(s)&&(s=function convertFormDataToObject(e){let t={};return e.forEach(((e,s)=>{if("@jsonPayload"===s&&"string"==typeof e)try{let s=JSON.parse(e);Object.assign(t,s)}catch(e){console.warn("@jsonPayload error:",e)}else void 0!==t[s]?(Array.isArray(t[s])||(t[s]=[t[s]]),t[s].push(inferFormDataValue(e))):t[s]=inferFormDataValue(e)})),t}(s));for(const t in s){const i=s[t];if(isFile(i))e.files[t]=e.files[t]||[],e.files[t].push(i);else if(Array.isArray(i)){const s=[],n=[];for(const e of i)isFile(e)?s.push(e):n.push(e);if(s.length>0&&s.length==i.length){e.files[t]=e.files[t]||[];for(let i of s)e.files[t].push(i)}else if(e.json[t]=n,s.length>0){let i=t;t.startsWith("+")||t.endsWith("+")||(i+="+"),e.files[i]=e.files[i]||[];for(let t of s)e.files[i].push(t)}}else e.json[t]=i}}}class Client{get baseUrl(){return this.baseURL}set baseUrl(e){this.baseURL=e}constructor(e="/",t,s="en-US"){this.cancelControllers={},this.recordServices={},this.enableAutoCancellation=!0,this.baseURL=e,this.lang=s,t?this.authStore=t:"undefined"!=typeof window&&window.Deno?this.authStore=new BaseAuthStore:this.authStore=new LocalAuthStore,this.collections=new CollectionService(this),this.files=new FileService(this),this.logs=new LogService(this),this.settings=new SettingsService(this),this.realtime=new RealtimeService(this),this.health=new HealthService(this),this.backups=new BackupService(this),this.crons=new CronService(this)}get admins(){return this.collection("_superusers")}createBatch(){return new BatchService(this)}collection(e){return this.recordServices[e]||(this.recordServices[e]=new RecordService(this,e)),this.recordServices[e]}autoCancellation(e){return this.enableAutoCancellation=!!e,this}cancelRequest(e){return this.cancelControllers[e]&&(this.cancelControllers[e].abort(),delete this.cancelControllers[e]),this}cancelAllRequests(){for(let e in this.cancelControllers)this.cancelControllers[e].abort();return this.cancelControllers={},this}filter(e,t){if(!t)return e;for(let s in t){let i=t[s];switch(typeof i){case"boolean":case"number":i=""+i;break;case"string":i="'"+i.replace(/'/g,"\\'")+"'";break;default:i=null===i?"null":i instanceof Date?"'"+i.toISOString().replace("T"," ")+"'":"'"+JSON.stringify(i).replace(/'/g,"\\'")+"'"}e=e.replaceAll("{:"+s+"}",i)}return e}getFileUrl(e,t,s={}){return console.warn("Please replace pb.getFileUrl() with pb.files.getURL()"),this.files.getURL(e,t,s)}buildUrl(e){return console.warn("Please replace pb.buildUrl() with pb.buildURL()"),this.buildURL(e)}buildURL(e){let t=this.baseURL;return"undefined"==typeof window||!window.location||t.startsWith("https://")||t.startsWith("http://")||(t=window.location.origin?.endsWith("/")?window.location.origin.substring(0,window.location.origin.length-1):window.location.origin||"",this.baseURL.startsWith("/")||(t+=window.location.pathname||"/",t+=t.endsWith("/")?"":"/"),t+=this.baseURL),e&&(t+=t.endsWith("/")?"":"/",t+=e.startsWith("/")?e.substring(1):e),t}async send(e,t){t=this.initSendOptions(e,t);let s=this.buildURL(e);if(this.beforeSend){const e=Object.assign({},await this.beforeSend(s,t));void 0!==e.url||void 0!==e.options?(s=e.url||s,t=e.options||t):Object.keys(e).length&&(t=e,console?.warn&&console.warn("Deprecated format of beforeSend return: please use `return { url, options }`, instead of `return options`."))}if(void 0!==t.query){const e=serializeQueryParams(t.query);e&&(s+=(s.includes("?")?"&":"?")+e),delete t.query}"application/json"==this.getHeader(t.headers,"Content-Type")&&t.body&&"string"!=typeof t.body&&(t.body=JSON.stringify(t.body));return(t.fetch||fetch)(s,t).then((async e=>{let s={};try{s=await e.json()}catch(e){}if(this.afterSend&&(s=await this.afterSend(e,s,t)),e.status>=400)throw new ClientResponseError({url:e.url,status:e.status,data:s});return s})).catch((e=>{throw new ClientResponseError(e)}))}initSendOptions(e,t){if((t=Object.assign({method:"GET"},t)).body=function convertToFormDataIfNeeded(e){if("undefined"==typeof FormData||void 0===e||"object"!=typeof e||null===e||isFormData(e)||!hasFileField(e))return e;const t=new FormData;for(const s in e){const i=e[s];if("object"!=typeof i||hasFileField({data:i})){const e=Array.isArray(i)?i:[i];for(let i of e)t.append(s,i)}else{let e={};e[s]=i,t.append("@jsonPayload",JSON.stringify(e))}}return t}(t.body),normalizeUnknownQueryParams(t),t.query=Object.assign({},t.params,t.query),void 0===t.requestKey&&(!1===t.$autoCancel||!1===t.query.$autoCancel?t.requestKey=null:(t.$cancelKey||t.query.$cancelKey)&&(t.requestKey=t.$cancelKey||t.query.$cancelKey)),delete t.$autoCancel,delete t.query.$autoCancel,delete t.$cancelKey,delete t.query.$cancelKey,null!==this.getHeader(t.headers,"Content-Type")||isFormData(t.body)||(t.headers=Object.assign({},t.headers,{"Content-Type":"application/json"})),null===this.getHeader(t.headers,"Accept-Language")&&(t.headers=Object.assign({},t.headers,{"Accept-Language":this.lang})),this.authStore.token&&null===this.getHeader(t.headers,"Authorization")&&(t.headers=Object.assign({},t.headers,{Authorization:this.authStore.token})),this.enableAutoCancellation&&null!==t.requestKey){const s=t.requestKey||(t.method||"GET")+e;delete t.requestKey,this.cancelRequest(s);const i=new AbortController;this.cancelControllers[s]=i,t.signal=i.signal}return t}getHeader(e,t){e=e||{},t=t.toLowerCase();for(let s in e)if(s.toLowerCase()==t)return e[s];return null}}return Client}));
-//# sourceMappingURL=pocketbase.umd.js.map
+(function (global, factory) {
+    typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
+    typeof define === 'function' && define.amd ? define(factory) :
+    (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.PocketBase = factory());
+})(this, (function () { 'use strict';
+
+    /**
+     * ClientResponseError is a custom Error class that is intended to wrap
+     * and normalize any error thrown by `Client.send()`.
+     */
+    class ClientResponseError extends Error {
+        constructor(errData) {
+            super("ClientResponseError");
+            this.url = "";
+            this.status = 0;
+            this.response = {};
+            this.isAbort = false;
+            this.originalError = null;
+            // Set the prototype explicitly.
+            // https://github.com/Microsoft/TypeScript-wiki/blob/main/Breaking-Changes.md#extending-built-ins-like-error-array-and-map-may-no-longer-work
+            Object.setPrototypeOf(this, ClientResponseError.prototype);
+            if (errData !== null && typeof errData === "object") {
+                this.url = typeof errData.url === "string" ? errData.url : "";
+                this.status = typeof errData.status === "number" ? errData.status : 0;
+                this.isAbort = !!errData.isAbort;
+                this.originalError = errData.originalError;
+                if (errData.response !== null && typeof errData.response === "object") {
+                    this.response = errData.response;
+                }
+                else if (errData.data !== null && typeof errData.data === "object") {
+                    this.response = errData.data;
+                }
+                else {
+                    this.response = {};
+                }
+            }
+            if (!this.originalError && !(errData instanceof ClientResponseError)) {
+                this.originalError = errData;
+            }
+            if (typeof DOMException !== "undefined" && errData instanceof DOMException) {
+                this.isAbort = true;
+            }
+            this.name = "ClientResponseError " + this.status;
+            this.message = this.response?.message;
+            if (!this.message) {
+                if (this.originalError?.cause?.message?.includes("ECONNREFUSED ::1")) {
+                    this.message =
+                        "Failed to connect to the PocketBase server. Try changing the SDK URL from localhost to 127.0.0.1 (https://github.com/pocketbase/js-sdk/issues/21).";
+                }
+                else {
+                    this.message = "Something went wrong while processing your request.";
+                }
+            }
+        }
+        /**
+         * Alias for `this.response` for backward compatibility.
+         */
+        get data() {
+            return this.response;
+        }
+        /**
+         * Make a POJO's copy of the current error class instance.
+         * @see https://github.com/vuex-orm/vuex-orm/issues/255
+         */
+        toJSON() {
+            return { ...this };
+        }
+    }
+
+    /**
+     * -------------------------------------------------------------------
+     * Simple cookie parse and serialize utilities mostly based on the
+     * node module https://github.com/jshttp/cookie.
+     * -------------------------------------------------------------------
+     */
+    /**
+     * RegExp to match field-content in RFC 7230 sec 3.2
+     *
+     * field-content = field-vchar [ 1*( SP / HTAB ) field-vchar ]
+     * field-vchar   = VCHAR / obs-text
+     * obs-text      = %x80-FF
+     */
+    const fieldContentRegExp = /^[\u0009\u0020-\u007e\u0080-\u00ff]+$/;
+    /**
+     * Parses the given cookie header string into an object
+     * The object has the various cookies as keys(names) => values
+     */
+    function cookieParse(str, options) {
+        const result = {};
+        if (typeof str !== "string") {
+            return result;
+        }
+        const opt = Object.assign({}, {});
+        const decode = opt.decode || defaultDecode;
+        let index = 0;
+        while (index < str.length) {
+            const eqIdx = str.indexOf("=", index);
+            // no more cookie pairs
+            if (eqIdx === -1) {
+                break;
+            }
+            let endIdx = str.indexOf(";", index);
+            if (endIdx === -1) {
+                endIdx = str.length;
+            }
+            else if (endIdx < eqIdx) {
+                // backtrack on prior semicolon
+                index = str.lastIndexOf(";", eqIdx - 1) + 1;
+                continue;
+            }
+            const key = str.slice(index, eqIdx).trim();
+            // only assign once
+            if (undefined === result[key]) {
+                let val = str.slice(eqIdx + 1, endIdx).trim();
+                // quoted values
+                if (val.charCodeAt(0) === 0x22) {
+                    val = val.slice(1, -1);
+                }
+                try {
+                    result[key] = decode(val);
+                }
+                catch (_) {
+                    result[key] = val; // no decoding
+                }
+            }
+            index = endIdx + 1;
+        }
+        return result;
+    }
+    /**
+     * Serialize data into a cookie header.
+     *
+     * Serialize the a name value pair into a cookie string suitable for
+     * http headers. An optional options object specified cookie parameters.
+     *
+     * ```js
+     * cookieSerialize('foo', 'bar', { httpOnly: true }) // "foo=bar; httpOnly"
+     * ```
+     */
+    function cookieSerialize(name, val, options) {
+        const opt = Object.assign({}, options || {});
+        const encode = opt.encode || defaultEncode;
+        if (!fieldContentRegExp.test(name)) {
+            throw new TypeError("argument name is invalid");
+        }
+        const value = encode(val);
+        if (value && !fieldContentRegExp.test(value)) {
+            throw new TypeError("argument val is invalid");
+        }
+        let result = name + "=" + value;
+        if (opt.maxAge != null) {
+            const maxAge = opt.maxAge - 0;
+            if (isNaN(maxAge) || !isFinite(maxAge)) {
+                throw new TypeError("option maxAge is invalid");
+            }
+            result += "; Max-Age=" + Math.floor(maxAge);
+        }
+        if (opt.domain) {
+            if (!fieldContentRegExp.test(opt.domain)) {
+                throw new TypeError("option domain is invalid");
+            }
+            result += "; Domain=" + opt.domain;
+        }
+        if (opt.path) {
+            if (!fieldContentRegExp.test(opt.path)) {
+                throw new TypeError("option path is invalid");
+            }
+            result += "; Path=" + opt.path;
+        }
+        if (opt.expires) {
+            if (!isDate(opt.expires) || isNaN(opt.expires.valueOf())) {
+                throw new TypeError("option expires is invalid");
+            }
+            result += "; Expires=" + opt.expires.toUTCString();
+        }
+        if (opt.httpOnly) {
+            result += "; HttpOnly";
+        }
+        if (opt.secure) {
+            result += "; Secure";
+        }
+        if (opt.priority) {
+            const priority = typeof opt.priority === "string" ? opt.priority.toLowerCase() : opt.priority;
+            switch (priority) {
+                case "low":
+                    result += "; Priority=Low";
+                    break;
+                case "medium":
+                    result += "; Priority=Medium";
+                    break;
+                case "high":
+                    result += "; Priority=High";
+                    break;
+                default:
+                    throw new TypeError("option priority is invalid");
+            }
+        }
+        if (opt.sameSite) {
+            const sameSite = typeof opt.sameSite === "string" ? opt.sameSite.toLowerCase() : opt.sameSite;
+            switch (sameSite) {
+                case true:
+                    result += "; SameSite=Strict";
+                    break;
+                case "lax":
+                    result += "; SameSite=Lax";
+                    break;
+                case "strict":
+                    result += "; SameSite=Strict";
+                    break;
+                case "none":
+                    result += "; SameSite=None";
+                    break;
+                default:
+                    throw new TypeError("option sameSite is invalid");
+            }
+        }
+        return result;
+    }
+    /**
+     * Default URL-decode string value function.
+     * Optimized to skip native call when no `%`.
+     */
+    function defaultDecode(val) {
+        return val.indexOf("%") !== -1 ? decodeURIComponent(val) : val;
+    }
+    /**
+     * Default URL-encode value function.
+     */
+    function defaultEncode(val) {
+        return encodeURIComponent(val);
+    }
+    /**
+     * Determines if value is a Date.
+     */
+    function isDate(val) {
+        return Object.prototype.toString.call(val) === "[object Date]" || val instanceof Date;
+    }
+
+    let atobPolyfill;
+    if (typeof atob === "function") {
+        atobPolyfill = atob;
+    }
+    else {
+        /**
+         * The code was extracted from:
+         * https://github.com/davidchambers/Base64.js
+         */
+        atobPolyfill = (input) => {
+            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+            let str = String(input).replace(/=+$/, "");
+            if (str.length % 4 == 1) {
+                throw new Error("'atob' failed: The string to be decoded is not correctly encoded.");
+            }
+            for (
+            // initialize result and counters
+            var bc = 0, bs, buffer, idx = 0, output = ""; 
+            // get next character
+            (buffer = str.charAt(idx++)); 
+            // character found in table? initialize bit storage and add its ascii value;
+            ~buffer &&
+                ((bs = bc % 4 ? bs * 64 + buffer : buffer),
+                    // and if not first of each 4 characters,
+                    // convert the first 8 bits to one ascii character
+                    bc++ % 4)
+                ? (output += String.fromCharCode(255 & (bs >> ((-2 * bc) & 6))))
+                : 0) {
+                // try to find character in table (0-63, not found => -1)
+                buffer = chars.indexOf(buffer);
+            }
+            return output;
+        };
+    }
+    /**
+     * Returns JWT token's payload data.
+     */
+    function getTokenPayload(token) {
+        if (token) {
+            try {
+                const encodedPayload = decodeURIComponent(atobPolyfill(token.split(".")[1])
+                    .split("")
+                    .map(function (c) {
+                    return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+                })
+                    .join(""));
+                return JSON.parse(encodedPayload) || {};
+            }
+            catch (e) { }
+        }
+        return {};
+    }
+    /**
+     * Checks whether a JWT token is expired or not.
+     * Tokens without `exp` payload key are considered valid.
+     * Tokens with empty payload (eg. invalid token strings) are considered expired.
+     *
+     * @param token The token to check.
+     * @param [expirationThreshold] Time in seconds that will be subtracted from the token `exp` property.
+     */
+    function isTokenExpired(token, expirationThreshold = 0) {
+        let payload = getTokenPayload(token);
+        if (Object.keys(payload).length > 0 &&
+            (!payload.exp || payload.exp - expirationThreshold > Date.now() / 1000)) {
+            return false;
+        }
+        return true;
+    }
+
+    const defaultCookieKey = "pb_auth";
+    /**
+     * Base AuthStore class that stores the auth state in runtime memory (aka. only for the duration of the store instane).
+     *
+     * Usually you wouldn't use it directly and instead use the builtin LocalAuthStore, AsyncAuthStore
+     * or extend it with your own custom implementation.
+     */
+    class BaseAuthStore {
+        constructor() {
+            this.baseToken = "";
+            this.baseModel = null;
+            this._onChangeCallbacks = [];
+        }
+        /**
+         * Retrieves the stored token (if any).
+         */
+        get token() {
+            return this.baseToken;
+        }
+        /**
+         * Retrieves the stored model data (if any).
+         */
+        get record() {
+            return this.baseModel;
+        }
+        /**
+         * @deprecated use `record` instead.
+         */
+        get model() {
+            return this.baseModel;
+        }
+        /**
+         * Loosely checks if the store has valid token (aka. existing and unexpired exp claim).
+         */
+        get isValid() {
+            return !isTokenExpired(this.token);
+        }
+        /**
+         * Loosely checks whether the currently loaded store state is for superuser.
+         *
+         * Alternatively you can also compare directly `pb.authStore.record?.collectionName`.
+         */
+        get isSuperuser() {
+            let payload = getTokenPayload(this.token);
+            return (payload.type == "auth" &&
+                (this.record?.collectionName == "_superusers" ||
+                    // fallback in case the record field is not populated and assuming
+                    // that the collection crc32 checksum id wasn't manually changed
+                    (!this.record?.collectionName &&
+                        payload.collectionId == "pbc_3142635823")));
+        }
+        /**
+         * @deprecated use `isSuperuser` instead or simply check the record.collectionName property.
+         */
+        get isAdmin() {
+            console.warn("Please replace pb.authStore.isAdmin with pb.authStore.isSuperuser OR simply check the value of pb.authStore.record?.collectionName");
+            return this.isSuperuser;
+        }
+        /**
+         * @deprecated use `!isSuperuser` instead or simply check the record.collectionName property.
+         */
+        get isAuthRecord() {
+            console.warn("Please replace pb.authStore.isAuthRecord with !pb.authStore.isSuperuser OR simply check the value of pb.authStore.record?.collectionName");
+            return getTokenPayload(this.token).type == "auth" && !this.isSuperuser;
+        }
+        /**
+         * Saves the provided new token and model data in the auth store.
+         */
+        save(token, record) {
+            this.baseToken = token || "";
+            this.baseModel = record || null;
+            this.triggerChange();
+        }
+        /**
+         * Removes the stored token and model data form the auth store.
+         */
+        clear() {
+            this.baseToken = "";
+            this.baseModel = null;
+            this.triggerChange();
+        }
+        /**
+         * Parses the provided cookie string and updates the store state
+         * with the cookie's token and model data.
+         *
+         * NB! This function doesn't validate the token or its data.
+         * Usually this isn't a concern if you are interacting only with the
+         * PocketBase API because it has the proper server-side security checks in place,
+         * but if you are using the store `isValid` state for permission controls
+         * in a node server (eg. SSR), then it is recommended to call `authRefresh()`
+         * after loading the cookie to ensure an up-to-date token and model state.
+         * For example:
+         *
+         * ```js
+         * pb.authStore.loadFromCookie("cookie string...");
+         *
+         * try {
+         *     // get an up-to-date auth store state by veryfing and refreshing the loaded auth model (if any)
+         *     pb.authStore.isValid && await pb.collection('users').authRefresh();
+         * } catch (_) {
+         *     // clear the auth store on failed refresh
+         *     pb.authStore.clear();
+         * }
+         * ```
+         */
+        loadFromCookie(cookie, key = defaultCookieKey) {
+            const rawData = cookieParse(cookie || "")[key] || "";
+            let data = {};
+            try {
+                data = JSON.parse(rawData);
+                // normalize
+                if (typeof data === null || typeof data !== "object" || Array.isArray(data)) {
+                    data = {};
+                }
+            }
+            catch (_) { }
+            this.save(data.token || "", data.record || data.model || null);
+        }
+        /**
+         * Exports the current store state as cookie string.
+         *
+         * By default the following optional attributes are added:
+         * - Secure
+         * - HttpOnly
+         * - SameSite=Strict
+         * - Path=/
+         * - Expires={the token expiration date}
+         *
+         * NB! If the generated cookie exceeds 4096 bytes, this method will
+         * strip the model data to the bare minimum to try to fit within the
+         * recommended size in https://www.rfc-editor.org/rfc/rfc6265#section-6.1.
+         */
+        exportToCookie(options, key = defaultCookieKey) {
+            const defaultOptions = {
+                secure: true,
+                sameSite: true,
+                httpOnly: true,
+                path: "/",
+            };
+            // extract the token expiration date
+            const payload = getTokenPayload(this.token);
+            if (payload?.exp) {
+                defaultOptions.expires = new Date(payload.exp * 1000);
+            }
+            else {
+                defaultOptions.expires = new Date("1970-01-01");
+            }
+            // merge with the user defined options
+            options = Object.assign({}, defaultOptions, options);
+            const rawData = {
+                token: this.token,
+                record: this.record ? JSON.parse(JSON.stringify(this.record)) : null,
+            };
+            let result = cookieSerialize(key, JSON.stringify(rawData), options);
+            const resultLength = typeof Blob !== "undefined" ? new Blob([result]).size : result.length;
+            // strip down the model data to the bare minimum
+            if (rawData.record && resultLength > 4096) {
+                rawData.record = { id: rawData.record?.id, email: rawData.record?.email };
+                const extraProps = ["collectionId", "collectionName", "verified"];
+                for (const prop in this.record) {
+                    if (extraProps.includes(prop)) {
+                        rawData.record[prop] = this.record[prop];
+                    }
+                }
+                result = cookieSerialize(key, JSON.stringify(rawData), options);
+            }
+            return result;
+        }
+        /**
+         * Register a callback function that will be called on store change.
+         *
+         * You can set the `fireImmediately` argument to true in order to invoke
+         * the provided callback right after registration.
+         *
+         * Returns a removal function that you could call to "unsubscribe" from the changes.
+         */
+        onChange(callback, fireImmediately = false) {
+            this._onChangeCallbacks.push(callback);
+            if (fireImmediately) {
+                callback(this.token, this.record);
+            }
+            return () => {
+                for (let i = this._onChangeCallbacks.length - 1; i >= 0; i--) {
+                    if (this._onChangeCallbacks[i] == callback) {
+                        delete this._onChangeCallbacks[i]; // removes the function reference
+                        this._onChangeCallbacks.splice(i, 1); // reindex the array
+                        return;
+                    }
+                }
+            };
+        }
+        triggerChange() {
+            for (const callback of this._onChangeCallbacks) {
+                callback && callback(this.token, this.record);
+            }
+        }
+    }
+
+    /**
+     * The default token store for browsers with auto fallback
+     * to runtime/memory if local storage is undefined (e.g. in node env).
+     */
+    class LocalAuthStore extends BaseAuthStore {
+        constructor(storageKey = "pocketbase_auth") {
+            super();
+            this.storageFallback = {};
+            this.storageKey = storageKey;
+            this._bindStorageEvent();
+        }
+        /**
+         * @inheritdoc
+         */
+        get token() {
+            const data = this._storageGet(this.storageKey) || {};
+            return data.token || "";
+        }
+        /**
+         * @inheritdoc
+         */
+        get record() {
+            const data = this._storageGet(this.storageKey) || {};
+            return data.record || data.model || null;
+        }
+        /**
+         * @deprecated use `record` instead.
+         */
+        get model() {
+            return this.record;
+        }
+        /**
+         * @inheritdoc
+         */
+        save(token, record) {
+            this._storageSet(this.storageKey, {
+                token: token,
+                record: record,
+            });
+            super.save(token, record);
+        }
+        /**
+         * @inheritdoc
+         */
+        clear() {
+            this._storageRemove(this.storageKey);
+            super.clear();
+        }
+        // ---------------------------------------------------------------
+        // Internal helpers:
+        // ---------------------------------------------------------------
+        /**
+         * Retrieves `key` from the browser's local storage
+         * (or runtime/memory if local storage is undefined).
+         */
+        _storageGet(key) {
+            if (typeof window !== "undefined" && window?.localStorage) {
+                const rawValue = window.localStorage.getItem(key) || "";
+                try {
+                    return JSON.parse(rawValue);
+                }
+                catch (e) {
+                    // not a json
+                    return rawValue;
+                }
+            }
+            // fallback
+            return this.storageFallback[key];
+        }
+        /**
+         * Stores a new data in the browser's local storage
+         * (or runtime/memory if local storage is undefined).
+         */
+        _storageSet(key, value) {
+            if (typeof window !== "undefined" && window?.localStorage) {
+                // store in local storage
+                let normalizedVal = value;
+                if (typeof value !== "string") {
+                    normalizedVal = JSON.stringify(value);
+                }
+                window.localStorage.setItem(key, normalizedVal);
+            }
+            else {
+                // store in fallback
+                this.storageFallback[key] = value;
+            }
+        }
+        /**
+         * Removes `key` from the browser's local storage and the runtime/memory.
+         */
+        _storageRemove(key) {
+            // delete from local storage
+            if (typeof window !== "undefined" && window?.localStorage) {
+                window.localStorage?.removeItem(key);
+            }
+            // delete from fallback
+            delete this.storageFallback[key];
+        }
+        /**
+         * Updates the current store state on localStorage change.
+         */
+        _bindStorageEvent() {
+            if (typeof window === "undefined" ||
+                !window?.localStorage ||
+                !window.addEventListener) {
+                return;
+            }
+            window.addEventListener("storage", (e) => {
+                if (e.key != this.storageKey) {
+                    return;
+                }
+                const data = this._storageGet(this.storageKey) || {};
+                super.save(data.token || "", data.record || data.model || null);
+            });
+        }
+    }
+
+    /**
+     * BaseService class that should be inherited from all API services.
+     */
+    class BaseService {
+        constructor(client) {
+            this.client = client;
+        }
+    }
+
+    class SettingsService extends BaseService {
+        /**
+         * Fetch all available app settings.
+         *
+         * @throws {ClientResponseError}
+         */
+        getAll(options) {
+            options = Object.assign({
+                method: "GET",
+            }, options);
+            return this.client.send("/api/settings", options);
+        }
+        /**
+         * Bulk updates app settings.
+         *
+         * @throws {ClientResponseError}
+         */
+        update(bodyParams, options) {
+            options = Object.assign({
+                method: "PATCH",
+                body: bodyParams,
+            }, options);
+            return this.client.send("/api/settings", options);
+        }
+        /**
+         * Performs a S3 filesystem connection test.
+         *
+         * The currently supported `filesystem` are "storage" and "backups".
+         *
+         * @throws {ClientResponseError}
+         */
+        testS3(filesystem = "storage", options) {
+            options = Object.assign({
+                method: "POST",
+                body: {
+                    filesystem: filesystem,
+                },
+            }, options);
+            this.client.send("/api/settings/test/s3", options);
+            return true;
+        }
+        /**
+         * Sends a test email.
+         *
+         * The possible `emailTemplate` values are:
+         * - verification
+         * - password-reset
+         * - email-change
+         *
+         * @throws {ClientResponseError}
+         */
+        testEmail(collectionIdOrName, toEmail, emailTemplate, options) {
+            options = Object.assign({
+                method: "POST",
+                body: {
+                    email: toEmail,
+                    template: emailTemplate,
+                    collection: collectionIdOrName,
+                },
+            }, options);
+            this.client.send("/api/settings/test/email", options);
+            return true;
+        }
+        /**
+         * Generates a new Apple OAuth2 client secret.
+         *
+         * @throws {ClientResponseError}
+         */
+        generateAppleClientSecret(clientId, teamId, keyId, privateKey, duration, options) {
+            options = Object.assign({
+                method: "POST",
+                body: {
+                    clientId,
+                    teamId,
+                    keyId,
+                    privateKey,
+                    duration,
+                },
+            }, options);
+            return this.client.send("/api/settings/apple/generate-client-secret", options);
+        }
+    }
+
+    class CrudService extends BaseService {
+        /**
+         * Response data decoder.
+         */
+        decode(data) {
+            return data;
+        }
+        getFullList(batchOrqueryParams, options) {
+            if (typeof batchOrqueryParams == "number") {
+                return this._getFullList(batchOrqueryParams, options);
+            }
+            options = Object.assign({}, batchOrqueryParams, options);
+            let batch = 500;
+            if (options.batch) {
+                batch = options.batch;
+                delete options.batch;
+            }
+            return this._getFullList(batch, options);
+        }
+        /**
+         * Returns paginated items list.
+         *
+         * You can use the generic T to supply a wrapper type of the crud model.
+         *
+         * @throws {ClientResponseError}
+         */
+        getList(page = 1, perPage = 30, options) {
+            options = Object.assign({
+                method: "GET",
+            }, options);
+            options.query = Object.assign({
+                page: page,
+                perPage: perPage,
+            }, options.query);
+            const responseData = this.client.send(this.baseCrudPath, options);
+            responseData.items =
+                responseData.items?.map((item) => {
+                    return this.decode(item);
+                }) || [];
+            return responseData;
+        }
+        /**
+         * Returns the first found item by the specified filter.
+         *
+         * Internally it calls `getList(1, 1, { filter, skipTotal })` and
+         * returns the first found item.
+         *
+         * You can use the generic T to supply a wrapper type of the crud model.
+         *
+         * For consistency with `getOne`, this method will throw a 404
+         * ClientResponseError if no item was found.
+         *
+         * @throws {ClientResponseError}
+         */
+        getFirstListItem(filter, options) {
+            options = Object.assign({
+                requestKey: "one_by_filter_" + this.baseCrudPath + "_" + filter,
+            }, options);
+            options.query = Object.assign({
+                filter: filter,
+                skipTotal: 1,
+            }, options.query);
+            const result = this.getList(1, 1, options);
+            if (!result?.items?.length) {
+                throw new ClientResponseError({
+                    status: 404,
+                    response: {
+                        code: 404,
+                        message: "The requested resource wasn't found.",
+                        data: {},
+                    },
+                });
+            }
+            return result.items[0];
+        }
+        /**
+         * Returns single item by its id.
+         *
+         * You can use the generic T to supply a wrapper type of the crud model.
+         *
+         * If `id` is empty it will throw a 404 error.
+         *
+         * @throws {ClientResponseError}
+         */
+        getOne(id, options) {
+            if (!id) {
+                throw new ClientResponseError({
+                    url: this.client.buildURL(this.baseCrudPath + "/"),
+                    status: 404,
+                    response: {
+                        code: 404,
+                        message: "Missing required record id.",
+                        data: {},
+                    },
+                });
+            }
+            options = Object.assign({
+                method: "GET",
+            }, options);
+            const responseData = this.client.send(this.baseCrudPath + "/" + encodeURIComponent(id), options);
+            return this.decode(responseData);
+        }
+        /**
+         * Creates a new item.
+         *
+         * You can use the generic T to supply a wrapper type of the crud model.
+         *
+         * @throws {ClientResponseError}
+         */
+        create(bodyParams, options) {
+            options = Object.assign({
+                method: "POST",
+                body: bodyParams,
+            }, options);
+            const responseData = this.client.send(this.baseCrudPath, options);
+            return this.decode(responseData);
+        }
+        /**
+         * Updates an existing item by its id.
+         *
+         * You can use the generic T to supply a wrapper type of the crud model.
+         *
+         * @throws {ClientResponseError}
+         */
+        update(id, bodyParams, options) {
+            options = Object.assign({
+                method: "PATCH",
+                body: bodyParams,
+            }, options);
+            const responseData = this.client.send(this.baseCrudPath + "/" + encodeURIComponent(id), options);
+            return this.decode(responseData);
+        }
+        /**
+         * Deletes an existing item by its id.
+         *
+         * @throws {ClientResponseError}
+         */
+        delete(id, options) {
+            options = Object.assign({
+                method: "DELETE",
+            }, options);
+            const responseData = this.client.send(this.baseCrudPath + "/" + encodeURIComponent(id), options);
+            return responseData;
+        }
+        /**
+         * Returns a promise with all list items batch fetched at once.
+         */
+        _getFullList(batchSize = 500, options) {
+            options = options || {};
+            options.query = Object.assign({
+                skipTotal: 1,
+            }, options.query);
+            let result = [];
+            let request = (page) => {
+                const list = this.getList(page, batchSize || 500, options);
+                const castedList = list;
+                const items = castedList.items;
+                result = result.concat(items);
+                if (items.length == list.perPage) {
+                    return request(page + 1);
+                }
+                return result;
+            };
+            return request(1);
+        }
+    }
+
+    function normalizeLegacyOptionsArgs(legacyWarn, baseOptions, bodyOrOptions, query) {
+        const hasBodyOrOptions = typeof bodyOrOptions !== "undefined";
+        const hasQuery = typeof query !== "undefined";
+        if (!hasQuery && !hasBodyOrOptions) {
+            return baseOptions;
+        }
+        if (hasQuery) {
+            console.warn(legacyWarn);
+            baseOptions.body = Object.assign({}, baseOptions.body, bodyOrOptions);
+            baseOptions.query = Object.assign({}, baseOptions.query, query);
+            return baseOptions;
+        }
+        return Object.assign(baseOptions, bodyOrOptions);
+    }
+
+    class RecordService extends CrudService {
+        constructor(client, collectionIdOrName) {
+            super(client);
+            this.collectionIdOrName = collectionIdOrName;
+        }
+        /**
+         * @inheritdoc
+         */
+        get baseCrudPath() {
+            return this.baseCollectionPath + "/records";
+        }
+        /**
+         * Returns the current collection service base path.
+         */
+        get baseCollectionPath() {
+            return "/api/collections/" + encodeURIComponent(this.collectionIdOrName);
+        }
+        /**
+         * Returns whether the current service collection is superusers.
+         */
+        get isSuperusers() {
+            return (this.collectionIdOrName == "_superusers" ||
+                this.collectionIdOrName == "_pbc_2773867675");
+        }
+        /**
+         * @inheritdoc
+         */
+        getFullList(batchOrOptions, options) {
+            if (typeof batchOrOptions == "number") {
+                return super.getFullList(batchOrOptions, options);
+            }
+            const params = Object.assign({}, batchOrOptions, options);
+            return super.getFullList(params);
+        }
+        /**
+         * @inheritdoc
+         */
+        getList(page = 1, perPage = 30, options) {
+            return super.getList(page, perPage, options);
+        }
+        /**
+         * @inheritdoc
+         */
+        getFirstListItem(filter, options) {
+            return super.getFirstListItem(filter, options);
+        }
+        /**
+         * @inheritdoc
+         */
+        getOne(id, options) {
+            return super.getOne(id, options);
+        }
+        /**
+         * @inheritdoc
+         */
+        create(bodyParams, options) {
+            return super.create(bodyParams, options);
+        }
+        /**
+         * @inheritdoc
+         *
+         * If the current `client.authStore.record` matches with the updated id, then
+         * on success the `client.authStore.record` will be updated with the new response record fields.
+         */
+        update(id, bodyParams, options) {
+            const item = super.update(id, bodyParams, options);
+            if (
+            // is record auth
+            this.client.authStore.record?.id === item?.id &&
+                (this.client.authStore.record?.collectionId === this.collectionIdOrName ||
+                    this.client.authStore.record?.collectionName === this.collectionIdOrName)) {
+                let authExpand = Object.assign({}, this.client.authStore.record.expand);
+                let authRecord = Object.assign({}, this.client.authStore.record, item);
+                if (authExpand) {
+                    // for now "merge" only top-level expand
+                    authRecord.expand = Object.assign(authExpand, item.expand);
+                }
+                this.client.authStore.save(this.client.authStore.token, authRecord);
+            }
+            return item;
+        }
+        /**
+         * @inheritdoc
+         *
+         * If the current `client.authStore.record` matches with the deleted id,
+         * then on success the `client.authStore` will be cleared.
+         */
+        delete(id, options) {
+            const success = super.delete(id, options);
+            if (success &&
+                // is record auth
+                this.client.authStore.record?.id === id &&
+                (this.client.authStore.record?.collectionId === this.collectionIdOrName ||
+                    this.client.authStore.record?.collectionName === this.collectionIdOrName)) {
+                this.client.authStore.clear();
+            }
+            return success;
+        }
+        // ---------------------------------------------------------------
+        // Auth handlers
+        // ---------------------------------------------------------------
+        /**
+         * Prepare successful collection authorization response.
+         */
+        authResponse(responseData) {
+            const record = this.decode(responseData?.record || {});
+            this.client.authStore.save(responseData?.token, record);
+            return Object.assign({}, responseData, {
+                // normalize common fields
+                token: responseData?.token || "",
+                record: record,
+            });
+        }
+        /**
+         * Returns all available collection auth methods.
+         *
+         * @throws {ClientResponseError}
+         */
+        listAuthMethods(options) {
+            options = Object.assign({
+                method: "GET",
+                // @todo remove after deleting the pre v0.23 API response fields
+                fields: "mfa,otp,password,oauth2",
+            }, options);
+            return this.client.send(this.baseCollectionPath + "/auth-methods", options);
+        }
+        /**
+         * Authenticate a single auth collection record via its username/email and password.
+         *
+         * On success, this method also automatically updates
+         * the client's AuthStore data and returns:
+         * - the authentication token
+         * - the authenticated record model
+         *
+         * @throws {ClientResponseError}
+         */
+        authWithPassword(usernameOrEmail, password, options) {
+            options = Object.assign({
+                method: "POST",
+                body: {
+                    identity: usernameOrEmail,
+                    password: password,
+                },
+            }, options);
+            let authData = this.client.send(this.baseCollectionPath + "/auth-with-password", options);
+            authData = this.authResponse(authData);
+            return authData;
+        }
+        authWithOAuth2Code(provider, code, codeVerifier, redirectURL, createData, bodyOrOptions, query) {
+            let options = {
+                method: "POST",
+                body: {
+                    provider: provider,
+                    code: code,
+                    codeVerifier: codeVerifier,
+                    redirectURL: redirectURL,
+                    createData: createData,
+                },
+            };
+            options = normalizeLegacyOptionsArgs("This form of authWithOAuth2Code(provider, code, codeVerifier, redirectURL, createData?, body?, query?) is deprecated. Consider replacing it with authWithOAuth2Code(provider, code, codeVerifier, redirectURL, createData?, options?).", options, bodyOrOptions, query);
+            const data = this.client.send(this.baseCollectionPath + "/auth-with-oauth2", options);
+            return this.authResponse(data);
+        }
+        authRefresh(bodyOrOptions, query) {
+            let options = {
+                method: "POST",
+            };
+            options = normalizeLegacyOptionsArgs("This form of authRefresh(body?, query?) is deprecated. Consider replacing it with authRefresh(options?).", options, bodyOrOptions, query);
+            const data = this.client.send(this.baseCollectionPath + "/auth-refresh", options);
+            return this.authResponse(data);
+        }
+        requestPasswordReset(email, bodyOrOptions, query) {
+            let options = {
+                method: "POST",
+                body: {
+                    email: email,
+                },
+            };
+            options = normalizeLegacyOptionsArgs("This form of requestPasswordReset(email, body?, query?) is deprecated. Consider replacing it with requestPasswordReset(email, options?).", options, bodyOrOptions, query);
+            this.client.send(this.baseCollectionPath + "/request-password-reset", options);
+            return true;
+        }
+        confirmPasswordReset(passwordResetToken, password, passwordConfirm, bodyOrOptions, query) {
+            let options = {
+                method: "POST",
+                body: {
+                    token: passwordResetToken,
+                    password: password,
+                    passwordConfirm: passwordConfirm,
+                },
+            };
+            options = normalizeLegacyOptionsArgs("This form of confirmPasswordReset(token, password, passwordConfirm, body?, query?) is deprecated. Consider replacing it with confirmPasswordReset(token, password, passwordConfirm, options?).", options, bodyOrOptions, query);
+            this.client.send(this.baseCollectionPath + "/confirm-password-reset", options);
+            return true;
+        }
+        requestVerification(email, bodyOrOptions, query) {
+            let options = {
+                method: "POST",
+                body: {
+                    email: email,
+                },
+            };
+            options = normalizeLegacyOptionsArgs("This form of requestVerification(email, body?, query?) is deprecated. Consider replacing it with requestVerification(email, options?).", options, bodyOrOptions, query);
+            this.client.send(this.baseCollectionPath + "/request-verification", options);
+            return true;
+        }
+        confirmVerification(verificationToken, bodyOrOptions, query) {
+            let options = {
+                method: "POST",
+                body: {
+                    token: verificationToken,
+                },
+            };
+            options = normalizeLegacyOptionsArgs("This form of confirmVerification(token, body?, query?) is deprecated. Consider replacing it with confirmVerification(token, options?).", options, bodyOrOptions, query);
+            this.client.send(this.baseCollectionPath + "/confirm-verification", options);
+            // on success manually update the current auth record verified state
+            const payload = getTokenPayload(verificationToken);
+            const model = this.client.authStore.record;
+            if (model &&
+                !model.verified &&
+                model.id === payload.id &&
+                model.collectionId === payload.collectionId) {
+                model.verified = true;
+                this.client.authStore.save(this.client.authStore.token, model);
+            }
+            return true;
+        }
+        requestEmailChange(newEmail, bodyOrOptions, query) {
+            let options = {
+                method: "POST",
+                body: {
+                    newEmail: newEmail,
+                },
+            };
+            options = normalizeLegacyOptionsArgs("This form of requestEmailChange(newEmail, body?, query?) is deprecated. Consider replacing it with requestEmailChange(newEmail, options?).", options, bodyOrOptions, query);
+            this.client.send(this.baseCollectionPath + "/request-email-change", options);
+            return true;
+        }
+        confirmEmailChange(emailChangeToken, password, bodyOrOptions, query) {
+            let options = {
+                method: "POST",
+                body: {
+                    token: emailChangeToken,
+                    password: password,
+                },
+            };
+            options = normalizeLegacyOptionsArgs("This form of confirmEmailChange(token, password, body?, query?) is deprecated. Consider replacing it with confirmEmailChange(token, password, options?).", options, bodyOrOptions, query);
+            this.client.send(this.baseCollectionPath + "/confirm-email-change", options);
+            // on success manually update the current auth record verified state
+            const payload = getTokenPayload(emailChangeToken);
+            const model = this.client.authStore.record;
+            if (model &&
+                model.id === payload.id &&
+                model.collectionId === payload.collectionId) {
+                this.client.authStore.clear();
+            }
+            return true;
+        }
+        /**
+         * Sends auth record OTP to the provided email.
+         *
+         * @throws {ClientResponseError}
+         */
+        requestOTP(email, options) {
+            options = Object.assign({
+                method: "POST",
+                body: { email: email },
+            }, options);
+            return this.client.send(this.baseCollectionPath + "/request-otp", options);
+        }
+        /**
+         * Authenticate a single auth collection record via OTP.
+         *
+         * On success, this method also automatically updates
+         * the client's AuthStore data and returns:
+         * - the authentication token
+         * - the authenticated record model
+         *
+         * @throws {ClientResponseError}
+         */
+        authWithOTP(otpId, password, options) {
+            options = Object.assign({
+                method: "POST",
+                body: { otpId, password },
+            }, options);
+            const data = this.client.send(this.baseCollectionPath + "/auth-with-otp", options);
+            return this.authResponse(data);
+        }
+        /**
+         * Impersonate authenticates with the specified recordId and
+         * returns a new client with the received auth token in a memory store.
+         *
+         * If `duration` is 0 the generated auth token will fallback
+         * to the default collection auth token duration.
+         *
+         * This action currently requires superusers privileges.
+         *
+         * @throws {ClientResponseError}
+         */
+        impersonate(recordId, duration, options) {
+            options = Object.assign({
+                method: "POST",
+                body: { duration: duration },
+            }, options);
+            options.headers = options.headers || {};
+            if (!options.headers.Authorization) {
+                options.headers.Authorization = this.client.authStore.token;
+            }
+            // create a new client loaded with the impersonated auth state
+            // ---
+            const client = new Client(this.client.baseURL, new BaseAuthStore(), this.client.lang);
+            const authData = client.send(this.baseCollectionPath + "/impersonate/" + encodeURIComponent(recordId), options);
+            client.authStore.save(authData?.token, this.decode(authData?.record || {}));
+            // ---
+            return client;
+        }
+    }
+
+    class CollectionService extends CrudService {
+        /**
+         * @inheritdoc
+         */
+        get baseCrudPath() {
+            return "/api/collections";
+        }
+        /**
+         * Imports the provided collections.
+         *
+         * If `deleteMissing` is `true`, all local collections and their fields,
+         * that are not present in the imported configuration, WILL BE DELETED
+         * (including their related records data)!
+         *
+         * @throws {ClientResponseError}
+         */
+        import(collections, deleteMissing = false, options) {
+            options = Object.assign({
+                method: "PUT",
+                body: {
+                    collections: collections,
+                    deleteMissing: deleteMissing,
+                },
+            }, options);
+            this.client.send(this.baseCrudPath + "/import", options);
+            return true;
+        }
+        /**
+         * Returns type indexed map with scaffolded collection models
+         * populated with their default field values.
+         *
+         * @throws {ClientResponseError}
+         */
+        getScaffolds(options) {
+            options = Object.assign({
+                method: "GET",
+            }, options);
+            return this.client.send(this.baseCrudPath + "/meta/scaffolds", options);
+        }
+        /**
+         * Deletes all records associated with the specified collection.
+         *
+         * @throws {ClientResponseError}
+         */
+        truncate(collectionIdOrName, options) {
+            options = Object.assign({
+                method: "DELETE",
+            }, options);
+            this.client.send(this.baseCrudPath +
+                "/" +
+                encodeURIComponent(collectionIdOrName) +
+                "/truncate", options);
+            return true;
+        }
+    }
+
+    class LogService extends BaseService {
+        /**
+         * Returns paginated logs list.
+         *
+         * @throws {ClientResponseError}
+         */
+        getList(page = 1, perPage = 30, options) {
+            options = Object.assign({ method: "GET" }, options);
+            options.query = Object.assign({
+                page: page,
+                perPage: perPage,
+            }, options.query);
+            return this.client.send("/api/logs", options);
+        }
+        /**
+         * Returns a single log by its id.
+         *
+         * If `id` is empty it will throw a 404 error.
+         *
+         * @throws {ClientResponseError}
+         */
+        getOne(id, options) {
+            if (!id) {
+                throw new ClientResponseError({
+                    url: this.client.buildURL("/api/logs/"),
+                    status: 404,
+                    response: {
+                        code: 404,
+                        message: "Missing required log id.",
+                        data: {},
+                    },
+                });
+            }
+            options = Object.assign({
+                method: "GET",
+            }, options);
+            return this.client.send("/api/logs/" + encodeURIComponent(id), options);
+        }
+        /**
+         * Returns logs statistics.
+         *
+         * @throws {ClientResponseError}
+         */
+        getStats(options) {
+            options = Object.assign({
+                method: "GET",
+            }, options);
+            return this.client.send("/api/logs/stats", options);
+        }
+    }
+
+    class HealthService extends BaseService {
+        /**
+         * Checks the health status of the api.
+         *
+         * @throws {ClientResponseError}
+         */
+        check(options) {
+            options = Object.assign({
+                method: "GET",
+            }, options);
+            return this.client.send("/api/health", options);
+        }
+    }
+
+    class FileService extends BaseService {
+        /**
+         * @deprecated Please replace with `pb.files.getURL()`.
+         */
+        getUrl(record, filename, queryParams = {}) {
+            console.warn("Please replace pb.files.getUrl() with pb.files.getURL()");
+            return this.getURL(record, filename, queryParams);
+        }
+        /**
+         * Builds and returns an absolute record file url for the provided filename.
+         */
+        getURL(record, filename, queryParams = {}) {
+            if (!filename ||
+                !record?.id ||
+                !(record?.collectionId || record?.collectionName)) {
+                return "";
+            }
+            const parts = [];
+            parts.push("api");
+            parts.push("files");
+            parts.push(encodeURIComponent(record.collectionId || record.collectionName));
+            parts.push(encodeURIComponent(record.id));
+            parts.push(encodeURIComponent(filename));
+            let result = this.client.buildURL(parts.join("/"));
+            if (Object.keys(queryParams).length) {
+                // normalize the download query param for consistency with the Dart sdk
+                if (queryParams.download === false) {
+                    delete queryParams.download;
+                }
+                const params = new URLSearchParams(queryParams);
+                result += (result.includes("?") ? "&" : "?") + params;
+            }
+            return result;
+        }
+        /**
+         * Requests a new private file access token for the current auth model.
+         *
+         * @throws {ClientResponseError}
+         */
+        getToken(options) {
+            options = Object.assign({
+                method: "POST",
+            }, options);
+            const data = this.client.send("/api/files/token", options);
+            return data?.token || "";
+        }
+    }
+
+    class BackupService extends BaseService {
+        /**
+         * Returns list with all available backup files.
+         *
+         * @throws {ClientResponseError}
+         */
+        getFullList(options) {
+            options = Object.assign({
+                method: "GET",
+            }, options);
+            return this.client.send("/api/backups", options);
+        }
+        /**
+         * Initializes a new backup.
+         *
+         * @throws {ClientResponseError}
+         */
+        create(basename, options) {
+            options = Object.assign({
+                method: "POST",
+                body: {
+                    name: basename,
+                },
+            }, options);
+            this.client.send("/api/backups", options);
+            return true;
+        }
+        /**
+         * Uploads an existing backup file.
+         *
+         * Example:
+         *
+         * ```js
+         * await pb.backups.upload({
+         *     file: new Blob([...]),
+         * });
+         * ```
+         *
+         * @throws {ClientResponseError}
+         */
+        upload(bodyParams, options) {
+            options = Object.assign({
+                method: "POST",
+                body: bodyParams,
+            }, options);
+            this.client.send("/api/backups/upload", options);
+            return true;
+        }
+        /**
+         * Deletes a single backup file.
+         *
+         * @throws {ClientResponseError}
+         */
+        delete(key, options) {
+            options = Object.assign({
+                method: "DELETE",
+            }, options);
+            this.client.send(`/api/backups/${encodeURIComponent(key)}`, options);
+            return true;
+        }
+        /**
+         * Initializes an app data restore from an existing backup.
+         *
+         * @throws {ClientResponseError}
+         */
+        restore(key, options) {
+            options = Object.assign({
+                method: "POST",
+            }, options);
+            this.client.send(`/api/backups/${encodeURIComponent(key)}/restore`, options);
+            return true;
+        }
+        /**
+         * Builds a download url for a single existing backup using a
+         * superuser file token and the backup file key.
+         *
+         * The file token can be generated via `pb.files.getToken()`.
+         */
+        getDownloadURL(token, key) {
+            return this.client.buildURL(`/api/backups/${encodeURIComponent(key)}?token=${encodeURIComponent(token)}`);
+        }
+    }
+
+    class CronService extends BaseService {
+        /**
+         * Returns list with all registered cron jobs.
+         *
+         * @throws {ClientResponseError}
+         */
+        getFullList(options) {
+            options = Object.assign({
+                method: "GET",
+            }, options);
+            return this.client.send("/api/crons", options);
+        }
+        /**
+         * Runs the specified cron job.
+         *
+         * @throws {ClientResponseError}
+         */
+        run(jobId, options) {
+            options = Object.assign({
+                method: "POST",
+            }, options);
+            this.client.send(`/api/crons/${encodeURIComponent(jobId)}`, options);
+            return true;
+        }
+    }
+
+    /**
+     * Checks if the specified value is a file (aka. File, Blob, RN file object).
+     */
+    function isFile(val) {
+        return ((typeof Blob !== "undefined" && val instanceof Blob) ||
+            (typeof File !== "undefined" && val instanceof File));
+    }
+    /**
+     * Loosely checks if the specified body is a FormData instance.
+     */
+    function isFormData(body) {
+        return (body &&
+            // we are checking the constructor name because FormData
+            // is not available natively in some environments and the
+            // polyfill(s) may not be globally accessible
+            (body.constructor.name === "FormData" ||
+                // fallback to global FormData instance check
+                // note: this is needed because the constructor.name could be different in case of
+                //       custom global FormData implementation, eg. React Native on Android/iOS
+                (typeof FormData !== "undefined" && body instanceof FormData)));
+    }
+    /**
+     * Checks if the submitted body object has at least one Blob/File field value.
+     */
+    function hasFileField(body) {
+        for (const key in body) {
+            const values = Array.isArray(body[key]) ? body[key] : [body[key]];
+            for (const v of values) {
+                if (isFile(v)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    /**
+     * Converts analyzes the provided body and converts it to FormData
+     * in case a plain object with File/Blob values is used.
+     */
+    function convertToFormDataIfNeeded(body) {
+        if (typeof FormData === "undefined" ||
+            typeof body === "undefined" ||
+            typeof body !== "object" ||
+            body === null ||
+            isFormData(body) ||
+            !hasFileField(body)) {
+            return body;
+        }
+        const form = new FormData();
+        for (const key in body) {
+            const val = body[key];
+            if (typeof val === "object" && !hasFileField({ data: val })) {
+                // send json-like values as jsonPayload to avoid the implicit string value normalization
+                let payload = {};
+                payload[key] = val;
+                form.append("@jsonPayload", JSON.stringify(payload));
+            }
+            else {
+                // in case of mixed string and file/blob
+                const normalizedVal = Array.isArray(val) ? val : [val];
+                for (let v of normalizedVal) {
+                    form.append(key, v);
+                }
+            }
+        }
+        return form;
+    }
+    /**
+     * Converts the provided FormData instance into a plain object.
+     *
+     * For consistency with the server multipart/form-data inferring,
+     * the following normalization rules are applied for plain multipart string values:
+     *   - "true" is converted to the json "true"
+     *   - "false" is converted to the json "false"
+     *   - numeric strings are converted to json number ONLY if the resulted
+     *     minimal number string representation is the same as the provided raw string
+     *     (aka. scientific notations, "Infinity", "0.0", "0001", etc. are kept as string)
+     *   - any other string (empty string too) is left as it is
+     */
+    function convertFormDataToObject(formData) {
+        let result = {};
+        formData.forEach((v, k) => {
+            if (k === "@jsonPayload" && typeof v == "string") {
+                try {
+                    let parsed = JSON.parse(v);
+                    Object.assign(result, parsed);
+                }
+                catch (err) {
+                    console.warn("@jsonPayload error:", err);
+                }
+            }
+            else {
+                if (typeof result[k] !== "undefined") {
+                    if (!Array.isArray(result[k])) {
+                        result[k] = [result[k]];
+                    }
+                    result[k].push(inferFormDataValue(v));
+                }
+                else {
+                    result[k] = inferFormDataValue(v);
+                }
+            }
+        });
+        return result;
+    }
+    const inferNumberCharsRegex = /^[\-\.\d]+$/;
+    function inferFormDataValue(value) {
+        if (typeof value != "string") {
+            return value;
+        }
+        if (value == "true") {
+            return true;
+        }
+        if (value == "false") {
+            return false;
+        }
+        // note: expects the provided raw string to match exactly with the minimal string representation of the parsed number
+        if ((value[0] === "-" || (value[0] >= "0" && value[0] <= "9")) &&
+            inferNumberCharsRegex.test(value)) {
+            let num = +value;
+            if ("" + num === value) {
+                return num;
+            }
+        }
+        return value;
+    }
+
+    // -------------------------------------------------------------------
+    // list of known SendOptions keys (everything else is treated as query param)
+    const knownSendOptionsKeys = [
+        "fetch",
+        "headers",
+        "body",
+        "query",
+        "params",
+        // ---,
+        "cache",
+        "credentials",
+        "headers",
+        "integrity",
+        "keepalive",
+        "method",
+        "mode",
+        "redirect",
+        "referrer",
+        "referrerPolicy",
+        "signal",
+        "window",
+    ];
+    // modifies in place the provided options by moving unknown send options as query parameters.
+    function normalizeUnknownQueryParams(options) {
+        if (!options) {
+            return;
+        }
+        options.query = options.query || {};
+        for (let key in options) {
+            if (knownSendOptionsKeys.includes(key)) {
+                continue;
+            }
+            options.query[key] = options[key];
+            delete options[key];
+        }
+    }
+    function serializeQueryParams(params) {
+        const result = [];
+        for (const key in params) {
+            if (params[key] === null || typeof params[key] === "undefined") {
+                // skip null or undefined query params
+                continue;
+            }
+            const value = params[key];
+            const encodedKey = encodeURIComponent(key);
+            if (Array.isArray(value)) {
+                // repeat array params
+                for (const v of value) {
+                    result.push(encodedKey + "=" + encodeURIComponent(v));
+                }
+            }
+            else if (value instanceof Date) {
+                result.push(encodedKey + "=" + encodeURIComponent(value.toISOString()));
+            }
+            else if (typeof value !== null && typeof value === "object") {
+                result.push(encodedKey + "=" + encodeURIComponent(JSON.stringify(value)));
+            }
+            else {
+                result.push(encodedKey + "=" + encodeURIComponent(value));
+            }
+        }
+        return result.join("&");
+    }
+
+    class BatchService extends BaseService {
+        constructor() {
+            super(...arguments);
+            this.requests = [];
+            this.subs = {};
+        }
+        /**
+         * Starts constructing a batch request entry for the specified collection.
+         */
+        collection(collectionIdOrName) {
+            if (!this.subs[collectionIdOrName]) {
+                this.subs[collectionIdOrName] = new SubBatchService(this.requests, collectionIdOrName);
+            }
+            return this.subs[collectionIdOrName];
+        }
+        /**
+         * Sends the batch requests.
+         *
+         * @throws {ClientResponseError}
+         */
+        send(options) {
+            const formData = new FormData();
+            const jsonData = [];
+            for (let i = 0; i < this.requests.length; i++) {
+                const req = this.requests[i];
+                jsonData.push({
+                    method: req.method,
+                    url: req.url,
+                    headers: req.headers,
+                    body: req.json,
+                });
+                if (req.files) {
+                    for (let key in req.files) {
+                        const files = req.files[key] || [];
+                        for (let file of files) {
+                            formData.append("requests." + i + "." + key, file);
+                        }
+                    }
+                }
+            }
+            formData.append("@jsonPayload", JSON.stringify({ requests: jsonData }));
+            options = Object.assign({
+                method: "POST",
+                body: formData,
+            }, options);
+            return this.client.send("/api/batch", options);
+        }
+    }
+    class SubBatchService {
+        constructor(requests, collectionIdOrName) {
+            this.requests = [];
+            this.requests = requests;
+            this.collectionIdOrName = collectionIdOrName;
+        }
+        /**
+         * Registers a record upsert request into the current batch queue.
+         *
+         * The request will be executed as update if `bodyParams` have a valid existing record `id` value, otherwise - create.
+         */
+        upsert(bodyParams, options) {
+            options = Object.assign({
+                body: bodyParams || {},
+            }, options);
+            const request = {
+                method: "PUT",
+                url: "/api/collections/" +
+                    encodeURIComponent(this.collectionIdOrName) +
+                    "/records",
+            };
+            this.prepareRequest(request, options);
+            this.requests.push(request);
+        }
+        /**
+         * Registers a record create request into the current batch queue.
+         */
+        create(bodyParams, options) {
+            options = Object.assign({
+                body: bodyParams || {},
+            }, options);
+            const request = {
+                method: "POST",
+                url: "/api/collections/" +
+                    encodeURIComponent(this.collectionIdOrName) +
+                    "/records",
+            };
+            this.prepareRequest(request, options);
+            this.requests.push(request);
+        }
+        /**
+         * Registers a record update request into the current batch queue.
+         */
+        update(id, bodyParams, options) {
+            options = Object.assign({
+                body: bodyParams || {},
+            }, options);
+            const request = {
+                method: "PATCH",
+                url: "/api/collections/" +
+                    encodeURIComponent(this.collectionIdOrName) +
+                    "/records/" +
+                    encodeURIComponent(id),
+            };
+            this.prepareRequest(request, options);
+            this.requests.push(request);
+        }
+        /**
+         * Registers a record delete request into the current batch queue.
+         */
+        delete(id, options) {
+            options = Object.assign({}, options);
+            const request = {
+                method: "DELETE",
+                url: "/api/collections/" +
+                    encodeURIComponent(this.collectionIdOrName) +
+                    "/records/" +
+                    encodeURIComponent(id),
+            };
+            this.prepareRequest(request, options);
+            this.requests.push(request);
+        }
+        prepareRequest(request, options) {
+            normalizeUnknownQueryParams(options);
+            request.headers = options.headers;
+            request.json = {};
+            request.files = {};
+            // serialize query parameters
+            // -----------------------------------------------------------
+            if (typeof options.query !== "undefined") {
+                const query = serializeQueryParams(options.query);
+                if (query) {
+                    request.url += (request.url.includes("?") ? "&" : "?") + query;
+                }
+            }
+            // extract json and files body data
+            // -----------------------------------------------------------
+            let body = options.body;
+            if (isFormData(body)) {
+                body = convertFormDataToObject(body);
+            }
+            for (const key in body) {
+                const val = body[key];
+                if (isFile(val)) {
+                    request.files[key] = request.files[key] || [];
+                    request.files[key].push(val);
+                }
+                else if (Array.isArray(val)) {
+                    const foundFiles = [];
+                    const foundRegular = [];
+                    for (const v of val) {
+                        if (isFile(v)) {
+                            foundFiles.push(v);
+                        }
+                        else {
+                            foundRegular.push(v);
+                        }
+                    }
+                    if (foundFiles.length > 0 && foundFiles.length == val.length) {
+                        // only files
+                        // ---
+                        request.files[key] = request.files[key] || [];
+                        for (let file of foundFiles) {
+                            request.files[key].push(file);
+                        }
+                    }
+                    else {
+                        // empty or mixed array (both regular and File/Blob values)
+                        // ---
+                        request.json[key] = foundRegular;
+                        if (foundFiles.length > 0) {
+                            // add "+" to append if not already since otherwise
+                            // the existing regular files will be deleted
+                            // (the mixed values order is preserved only within their corresponding groups)
+                            let fileKey = key;
+                            if (!key.startsWith("+") && !key.endsWith("+")) {
+                                fileKey += "+";
+                            }
+                            request.files[fileKey] = request.files[fileKey] || [];
+                            for (let file of foundFiles) {
+                                request.files[fileKey].push(file);
+                            }
+                        }
+                    }
+                }
+                else {
+                    request.json[key] = val;
+                }
+            }
+        }
+    }
+
+    /**
+     * PocketBase JS Client.
+     */
+    class Client {
+        /**
+         * Legacy getter alias for baseURL.
+         * @deprecated Please replace with baseURL.
+         */
+        get baseUrl() {
+            return this.baseURL;
+        }
+        /**
+         * Legacy setter alias for baseURL.
+         * @deprecated Please replace with baseURL.
+         */
+        set baseUrl(v) {
+            this.baseURL = v;
+        }
+        constructor(baseURL = "/", authStore, lang = "en-US") {
+            this.recordServices = {};
+            this.baseURL = baseURL;
+            this.lang = lang;
+            if (authStore) {
+                this.authStore = authStore;
+            }
+            else if (typeof window != "undefined" && !!window.Deno) {
+                // note: to avoid common security issues we fallback to runtime/memory store in case the code is running in Deno env
+                this.authStore = new BaseAuthStore();
+            }
+            else {
+                this.authStore = new LocalAuthStore();
+            }
+            // common services
+            this.collections = new CollectionService(this);
+            this.files = new FileService(this);
+            this.logs = new LogService(this);
+            this.settings = new SettingsService(this);
+            this.health = new HealthService(this);
+            this.backups = new BackupService(this);
+            this.crons = new CronService(this);
+        }
+        /**
+         * @deprecated
+         * With PocketBase v0.23.0 admins are converted to a regular auth
+         * collection named "_superusers", aka. you can use directly collection("_superusers").
+         */
+        get admins() {
+            return this.collection("_superusers");
+        }
+        /**
+         * Creates a new batch handler for sending multiple transactional
+         * create/update/upsert/delete collection requests in one network call.
+         *
+         * Example:
+         * ```js
+         * const batch = pb.createBatch();
+         *
+         * batch.collection("example1").create({ ... })
+         * batch.collection("example2").update("RECORD_ID", { ... })
+         * batch.collection("example3").delete("RECORD_ID")
+         * batch.collection("example4").upsert({ ... })
+         *
+         * await batch.send()
+         * ```
+         */
+        createBatch() {
+            return new BatchService(this);
+        }
+        /**
+         * Returns the RecordService associated to the specified collection.
+         */
+        collection(idOrName) {
+            if (!this.recordServices[idOrName]) {
+                this.recordServices[idOrName] = new RecordService(this, idOrName);
+            }
+            return this.recordServices[idOrName];
+        }
+        /**
+         * Constructs a filter expression with placeholders populated from a parameters object.
+         *
+         * Placeholder parameters are defined with the `{:paramName}` notation.
+         *
+         * The following parameter values are supported:
+         *
+         * - `string` (_single quotes are autoescaped_)
+         * - `number`
+         * - `boolean`
+         * - `Date` object (_stringified into the PocketBase datetime format_)
+         * - `null`
+         * - everything else is converted to a string using `JSON.stringify()`
+         *
+         * Example:
+         *
+         * ```js
+         * pb.collection("example").getFirstListItem(pb.filter(
+         *    'title ~ {:title} && created >= {:created}',
+         *    { title: "example", created: new Date()}
+         * ))
+         * ```
+         */
+        filter(raw, params) {
+            if (!params) {
+                return raw;
+            }
+            for (let key in params) {
+                let val = params[key];
+                switch (typeof val) {
+                    case "boolean":
+                    case "number":
+                        val = "" + val;
+                        break;
+                    case "string":
+                        val = "'" + val.replace(/'/g, "\\'") + "'";
+                        break;
+                    default:
+                        if (val === null) {
+                            val = "null";
+                        }
+                        else if (val instanceof Date) {
+                            val = "'" + val.toISOString().replace("T", " ") + "'";
+                        }
+                        else {
+                            val = "'" + JSON.stringify(val).replace(/'/g, "\\'") + "'";
+                        }
+                }
+                raw = raw.replaceAll("{:" + key + "}", val);
+            }
+            return raw;
+        }
+        /**
+         * @deprecated Please use `pb.files.getURL()`.
+         */
+        getFileUrl(record, filename, queryParams = {}) {
+            console.warn("Please replace pb.getFileUrl() with pb.files.getURL()");
+            return this.files.getURL(record, filename, queryParams);
+        }
+        /**
+         * @deprecated Please use `pb.buildURL()`.
+         */
+        buildUrl(path) {
+            console.warn("Please replace pb.buildUrl() with pb.buildURL()");
+            return this.buildURL(path);
+        }
+        /**
+         * Builds a full client url by safely concatenating the provided path.
+         */
+        buildURL(path) {
+            let url = this.baseURL;
+            // construct an absolute base url if in a browser environment
+            if (typeof window !== "undefined" &&
+                !!window.location &&
+                !url.startsWith("https://") &&
+                !url.startsWith("http://")) {
+                url = window.location.origin?.endsWith("/")
+                    ? window.location.origin.substring(0, window.location.origin.length - 1)
+                    : window.location.origin || "";
+                if (!this.baseURL.startsWith("/")) {
+                    url += window.location.pathname || "/";
+                    url += url.endsWith("/") ? "" : "/";
+                }
+                url += this.baseURL;
+            }
+            // concatenate the path
+            if (path) {
+                url += url.endsWith("/") ? "" : "/"; // append trailing slash if missing
+                url += path.startsWith("/") ? path.substring(1) : path;
+            }
+            return url;
+        }
+        /**
+         * Sends an api http request.
+         *
+         * @throws {ClientResponseError}
+         */
+        send(path, options) {
+            options = this.initSendOptions(path, options);
+            // build url + path
+            let url = this.buildURL(path);
+            if (this.beforeSend) {
+                const result = Object.assign({}, this.beforeSend(url, options));
+                if (typeof result.url !== "undefined" ||
+                    typeof result.options !== "undefined") {
+                    url = result.url || url;
+                    options = result.options || options;
+                }
+                else if (Object.keys(result).length) {
+                    // legacy behavior
+                    options = result;
+                    console?.warn &&
+                        console.warn("Deprecated format of beforeSend return: please use `return { url, options }`, instead of `return options`.");
+                }
+            }
+            // serialize the query parameters
+            if (typeof options.query !== "undefined") {
+                const query = serializeQueryParams(options.query);
+                if (query) {
+                    url += (url.includes("?") ? "&" : "?") + query;
+                }
+                delete options.query;
+            }
+            // ensures that the json body is serialized
+            if (this.getHeader(options.headers, "Content-Type") == "application/json" &&
+                options.body &&
+                typeof options.body !== "string") {
+                options.body = JSON.stringify(options.body);
+            }
+            const fetchFunc = options.fetch || $http.send;
+            // send the request
+            try {
+                console.log(`fetching ${url} with method ${options.method}`);
+                const response = fetchFunc({
+                    url: url,
+                    // method: options.method,
+                    // headers: options.headers,
+                    // body: options.body,
+                });
+                let data = {};
+                try {
+                    data = response.json();
+                }
+                catch (_) {
+                    // all api responses are expected to return json
+                    // with the exception of the realtime event and 204
+                }
+                if (this.afterSend) {
+                    data = this.afterSend(response, data, options);
+                }
+                if (response.statusCode >= 400) {
+                    throw new ClientResponseError({
+                        url,
+                        status: response.statusCode,
+                        data: data,
+                    });
+                }
+                return data;
+            }
+            catch (err) {
+                throw new ClientResponseError(err);
+            }
+        }
+        /**
+         * Shallow copy the provided object and takes care to initialize
+         * any options required to preserve the backward compatability.
+         *
+         * @param  {SendOptions} options
+         * @return {SendOptions}
+         */
+        // @ts-ignore
+        initSendOptions(path, options) {
+            options = Object.assign({ method: "GET" }, options);
+            // auto convert the body to FormData, if needed
+            options.body = convertToFormDataIfNeeded(options.body);
+            // move unknown send options as query parameters
+            normalizeUnknownQueryParams(options);
+            // add the json header, if not explicitly set
+            // (for FormData body the Content-Type header should be skipped since the boundary is autogenerated)
+            if (this.getHeader(options.headers, "Content-Type") === null &&
+                !isFormData(options.body)) {
+                options.headers = Object.assign({}, options.headers, {
+                    "Content-Type": "application/json",
+                });
+            }
+            // add Accept-Language header, if not explicitly set
+            if (this.getHeader(options.headers, "Accept-Language") === null) {
+                options.headers = Object.assign({}, options.headers, {
+                    "Accept-Language": this.lang,
+                });
+            }
+            // check if Authorization header can be added
+            if (
+            // has valid token
+            this.authStore.token &&
+                // auth header is not explicitly set
+                this.getHeader(options.headers, "Authorization") === null) {
+                options.headers = Object.assign({}, options.headers, {
+                    Authorization: this.authStore.token,
+                });
+            }
+            return options;
+        }
+        /**
+         * Extracts the header with the provided name in case-insensitive manner.
+         * Returns `null` if no header matching the name is found.
+         */
+        getHeader(headers, name) {
+            headers = headers || {};
+            name = name.toLowerCase();
+            for (let key in headers) {
+                if (key.toLowerCase() == name) {
+                    return headers[key];
+                }
+            }
+            return null;
+        }
+    }
+
+    return Client;
+
+}));

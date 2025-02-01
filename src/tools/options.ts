@@ -1,3 +1,5 @@
+export type FetchFunction = (url: string | URL, config?: RequestInit) => Response;
+
 export interface SendOptions extends RequestInit {
     // for backward compatibility and to minimize the verbosity,
     // any top-level field that doesn't exist in RequestInit or the
@@ -7,7 +9,7 @@ export interface SendOptions extends RequestInit {
     /**
      * Optional custom fetch function to use for sending the request.
      */
-    fetch?: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response>;
+    fetch?: typeof $http.send;
 
     /**
      * Custom headers to send with the requests.
@@ -23,29 +25,6 @@ export interface SendOptions extends RequestInit {
      * Query parameters that will be appended to the request url.
      */
     query?: { [key: string]: any };
-
-    /**
-     * @deprecated use `query` instead
-     *
-     * for backward-compatibility `params` values are merged with `query`,
-     * but this option may get removed in the final v1 release
-     */
-    params?: { [key: string]: any };
-
-    /**
-     * The request identifier that can be used to cancel pending requests.
-     */
-    requestKey?: string | null;
-
-    /**
-     * @deprecated use `requestKey:string` instead
-     */
-    $cancelKey?: string;
-
-    /**
-     * @deprecated use `requestKey:null` instead
-     */
-    $autoCancel?: boolean;
 }
 
 export interface CommonOptions extends SendOptions {
@@ -108,9 +87,6 @@ export interface AuthOptions extends CommonOptions {
 
 // list of known SendOptions keys (everything else is treated as query param)
 const knownSendOptionsKeys = [
-    "requestKey",
-    "$cancelKey",
-    "$autoCancel",
     "fetch",
     "headers",
     "body",

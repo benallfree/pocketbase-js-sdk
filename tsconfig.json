@@ -1,21 +1,22 @@
 {
-  "compilerOptions": {
-    "declaration": true,
-    "declarationDir": "./dist",
-    "moduleResolution": "node",
-    "sourceMap": true,
-    "target": "es2021",
-    "module": "esnext",
-    "strict": true,
-    "esModuleInterop": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noImplicitReturns": true,
-    "forceConsistentCasingInFileNames": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"],
+    "compilerOptions": {
+        "declaration": true,
+        "declarationDir": "./dist",
+        "moduleResolution": "node",
+        "sourceMap": true,
+        "target": "es2021",
+        "module": "esnext",
+        "strict": true,
+        "esModuleInterop": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noImplicitReturns": true,
+        "forceConsistentCasingInFileNames": true,
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["./src/*"],
+        },
+        "types": ["./src/types.d.ts"],
     },
-  },
-  "include": ["./src", "./tests"]
+    "include": ["./src", "./tests"],
 }

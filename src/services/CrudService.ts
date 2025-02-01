@@ -24,17 +24,17 @@ export abstract class CrudService<M> extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async getFullList<T = M>(options?: FullListOptions): Promise<Array<T>>;
+    getFullList<T = M>(options?: FullListOptions): Array<T>;
 
     /**
      * Legacy version of getFullList with explicitly specified batch size.
      */
-    async getFullList<T = M>(batch?: number, options?: ListOptions): Promise<Array<T>>;
+    getFullList<T = M>(batch?: number, options?: ListOptions): Array<T>;
 
-    async getFullList<T = M>(
+    getFullList<T = M>(
         batchOrqueryParams?: number | FullListOptions,
         options?: ListOptions,
-    ): Promise<Array<T>> {
+    ): Array<T> {
         if (typeof batchOrqueryParams == "number") {
             return this._getFullList<T>(batchOrqueryParams, options);
         }
@@ -57,11 +57,7 @@ export abstract class CrudService<M> extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async getList<T = M>(
-        page = 1,
-        perPage = 30,
-        options?: ListOptions,
-    ): Promise<ListResult<T>> {
+    getList<T = M>(page = 1, perPage = 30, options?: ListOptions): ListResult<T> {
         options = Object.assign(
             {
                 method: "GET",
@@ -77,14 +73,13 @@ export abstract class CrudService<M> extends BaseService {
             options.query,
         );
 
-        return this.client.send(this.baseCrudPath, options).then((responseData: any) => {
-            responseData.items =
-                responseData.items?.map((item: any) => {
-                    return this.decode<T>(item);
-                }) || [];
+        const responseData = this.client.send(this.baseCrudPath, options);
+        responseData.items =
+            responseData.items?.map((item: any) => {
+                return this.decode<T>(item);
+            }) || [];
 
-            return responseData;
-        });
+        return responseData;
     }
 
     /**
@@ -100,7 +95,7 @@ export abstract class CrudService<M> extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async getFirstListItem<T = M>(filter: string, options?: CommonOptions): Promise<T> {
+    getFirstListItem<T = M>(filter: string, options?: CommonOptions): T {
         options = Object.assign(
             {
                 requestKey: "one_by_filter_" + this.baseCrudPath + "_" + filter,
@@ -116,20 +111,19 @@ export abstract class CrudService<M> extends BaseService {
             options.query,
         );
 
-        return this.getList<T>(1, 1, options).then((result) => {
-            if (!result?.items?.length) {
-                throw new ClientResponseError({
-                    status: 404,
-                    response: {
-                        code: 404,
-                        message: "The requested resource wasn't found.",
-                        data: {},
-                    },
-                });
-            }
+        const result = this.getList<T>(1, 1, options);
+        if (!result?.items?.length) {
+            throw new ClientResponseError({
+                status: 404,
+                response: {
+                    code: 404,
+                    message: "The requested resource wasn't found.",
+                    data: {},
+                },
+            });
+        }
 
-            return result.items[0];
-        });
+        return result.items[0];
     }
 
     /**
@@ -141,7 +135,7 @@ export abstract class CrudService<M> extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async getOne<T = M>(id: string, options?: CommonOptions): Promise<T> {
+    getOne<T = M>(id: string, options?: CommonOptions): T {
         if (!id) {
             throw new ClientResponseError({
                 url: this.client.buildURL(this.baseCrudPath + "/"),
@@ -161,9 +155,11 @@ export abstract class CrudService<M> extends BaseService {
             options,
         );
 
-        return this.client
-            .send(this.baseCrudPath + "/" + encodeURIComponent(id), options)
-            .then((responseData: any) => this.decode<T>(responseData));
+        const responseData = this.client.send(
+            this.baseCrudPath + "/" + encodeURIComponent(id),
+            options,
+        );
+        return this.decode<T>(responseData);
     }
 
     /**
@@ -173,10 +169,10 @@ export abstract class CrudService<M> extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async create<T = M>(
+    create<T = M>(
         bodyParams?: { [key: string]: any } | FormData,
         options?: CommonOptions,
-    ): Promise<T> {
+    ): T {
         options = Object.assign(
             {
                 method: "POST",
@@ -185,9 +181,8 @@ export abstract class CrudService<M> extends BaseService {
             options,
         );
 
-        return this.client
-            .send(this.baseCrudPath, options)
-            .then((responseData: any) => this.decode<T>(responseData));
+        const responseData = this.client.send(this.baseCrudPath, options);
+        return this.decode<T>(responseData);
     }
 
     /**
@@ -197,11 +192,11 @@ export abstract class CrudService<M> extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async update<T = M>(
+    update<T = M>(
         id: string,
         bodyParams?: { [key: string]: any } | FormData,
         options?: CommonOptions,
-    ): Promise<T> {
+    ): T {
         options = Object.assign(
             {
                 method: "PATCH",
@@ -210,9 +205,11 @@ export abstract class CrudService<M> extends BaseService {
             options,
         );
 
-        return this.client
-            .send(this.baseCrudPath + "/" + encodeURIComponent(id), options)
-            .then((responseData: any) => this.decode<T>(responseData));
+        const responseData = this.client.send(
+            this.baseCrudPath + "/" + encodeURIComponent(id),
+            options,
+        );
+        return this.decode<T>(responseData);
     }
 
     /**
@@ -220,7 +217,7 @@ export abstract class CrudService<M> extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async delete(id: string, options?: CommonOptions): Promise<boolean> {
+    delete(id: string, options?: CommonOptions): boolean {
         options = Object.assign(
             {
                 method: "DELETE",
@@ -228,18 +225,17 @@ export abstract class CrudService<M> extends BaseService {
             options,
         );
 
-        return this.client
-            .send(this.baseCrudPath + "/" + encodeURIComponent(id), options)
-            .then(() => true);
+        const responseData = this.client.send(
+            this.baseCrudPath + "/" + encodeURIComponent(id),
+            options,
+        );
+        return responseData;
     }
 
     /**
      * Returns a promise with all list items batch fetched at once.
      */
-    protected _getFullList<T = M>(
-        batchSize = 500,
-        options?: ListOptions,
-    ): Promise<Array<T>> {
+    protected _getFullList<T = M>(batchSize = 500, options?: ListOptions): Array<T> {
         options = options || {};
         options.query = Object.assign(
             {
@@ -250,19 +246,18 @@ export abstract class CrudService<M> extends BaseService {
 
         let result: Array<T> = [];
 
-        let request = async (page: number): Promise<Array<any>> => {
-            return this.getList(page, batchSize || 500, options).then((list) => {
-                const castedList = list as any as ListResult<T>;
-                const items = castedList.items;
+        let request = (page: number): Array<any> => {
+            const list = this.getList(page, batchSize || 500, options);
+            const castedList = list as any as ListResult<T>;
+            const items = castedList.items;
 
-                result = result.concat(items);
+            result = result.concat(items);
 
-                if (items.length == list.perPage) {
-                    return request(page + 1);
-                }
+            if (items.length == list.perPage) {
+                return request(page + 1);
+            }
 
-                return result;
-            });
+            return result;
         };
 
         return request(1);

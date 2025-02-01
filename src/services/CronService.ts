@@ -12,7 +12,7 @@ export class CronService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async getFullList(options?: CommonOptions): Promise<Array<CronJob>> {
+    getFullList(options?: CommonOptions): Array<CronJob> {
         options = Object.assign(
             {
                 method: "GET",
@@ -28,7 +28,7 @@ export class CronService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async run(jobId: string, options?: CommonOptions): Promise<boolean> {
+    run(jobId: string, options?: CommonOptions): boolean {
         options = Object.assign(
             {
                 method: "POST",
@@ -36,8 +36,7 @@ export class CronService extends BaseService {
             options,
         );
 
-        return this.client
-            .send(`/api/crons/${encodeURIComponent(jobId)}`, options)
-            .then(() => true);
+        this.client.send(`/api/crons/${encodeURIComponent(jobId)}`, options);
+        return true;
     }
 }

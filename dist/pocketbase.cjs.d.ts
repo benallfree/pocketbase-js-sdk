@@ -246,7 +246,7 @@ interface SendOptions extends RequestInit {
     /**
      * Optional custom fetch function to use for sending the request.
      */
-    fetch?: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response>;
+    fetch?: typeof $http.send;
     /**
      * Custom headers to send with the requests.
      */
@@ -263,27 +263,6 @@ interface SendOptions extends RequestInit {
     query?: {
         [key: string]: any;
     };
-    /**
-     * @deprecated use `query` instead
-     *
-     * for backward-compatibility `params` values are merged with `query`,
-     * but this option may get removed in the final v1 release
-     */
-    params?: {
-        [key: string]: any;
-    };
-    /**
-     * The request identifier that can be used to cancel pending requests.
-     */
-    requestKey?: string | null;
-    /**
-     * @deprecated use `requestKey:string` instead
-     */
-    $cancelKey?: string;
-    /**
-     * @deprecated use `requestKey:null` instead
-     */
-    $autoCancel?: boolean;
 }
 interface CommonOptions extends SendOptions {
     fields?: string;
@@ -305,11 +284,6 @@ interface RecordListOptions extends ListOptions, RecordOptions {
 }
 interface RecordFullListOptions extends FullListOptions, RecordOptions {
 }
-interface RecordSubscribeOptions extends SendOptions {
-    fields?: string;
-    filter?: string;
-    expand?: string;
-}
 interface LogStatsOptions extends CommonOptions {
     filter?: string;
 }
@@ -326,9 +300,9 @@ declare class SettingsService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    getAll(options?: CommonOptions): Promise<{
+    getAll(options?: CommonOptions): {
         [key: string]: any;
-    }>;
+    };
     /**
      * Bulk updates app settings.
      *
@@ -336,9 +310,9 @@ declare class SettingsService extends BaseService {
      */
     update(bodyParams?: {
         [key: string]: any;
-    } | FormData, options?: CommonOptions): Promise<{
+    } | FormData, options?: CommonOptions): {
         [key: string]: any;
-    }>;
+    };
     /**
      * Performs a S3 filesystem connection test.
      *
@@ -346,7 +320,7 @@ declare class SettingsService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    testS3(filesystem?: string, options?: CommonOptions): Promise<boolean>;
+    testS3(filesystem?: string, options?: CommonOptions): boolean;
     /**
      * Sends a test email.
      *
@@ -357,96 +331,13 @@ declare class SettingsService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    testEmail(collectionIdOrName: string, toEmail: string, emailTemplate: string, options?: CommonOptions): Promise<boolean>;
+    testEmail(collectionIdOrName: string, toEmail: string, emailTemplate: string, options?: CommonOptions): boolean;
     /**
      * Generates a new Apple OAuth2 client secret.
      *
      * @throws {ClientResponseError}
      */
-    generateAppleClientSecret(clientId: string, teamId: string, keyId: string, privateKey: string, duration: number, options?: CommonOptions): Promise<appleClientSecret>;
-}
-type UnsubscribeFunc = () => Promise<void>;
-declare class RealtimeService extends BaseService {
-    clientId: string;
-    private eventSource;
-    private subscriptions;
-    private lastSentSubscriptions;
-    private connectTimeoutId;
-    private maxConnectTimeout;
-    private reconnectTimeoutId;
-    private reconnectAttempts;
-    private maxReconnectAttempts;
-    private predefinedReconnectIntervals;
-    private pendingConnects;
-    /**
-     * Returns whether the realtime connection has been established.
-     */
-    get isConnected(): boolean;
-    /**
-     * An optional hook that is invoked when the realtime client disconnects
-     * either when unsubscribing from all subscriptions or when the
-     * connection was interrupted or closed by the server.
-     *
-     * The received argument could be used to determine whether the disconnect
-     * is a result from unsubscribing (`activeSubscriptions.length == 0`)
-     * or because of network/server error (`activeSubscriptions.length > 0`).
-     *
-     * If you want to listen for the opposite, aka. when the client connection is established,
-     * subscribe to the `PB_CONNECT` event.
-     */
-    onDisconnect?: (activeSubscriptions: Array<string>) => void;
-    /**
-     * Register the subscription listener.
-     *
-     * You can subscribe multiple times to the same topic.
-     *
-     * If the SSE connection is not started yet,
-     * this method will also initialize it.
-     */
-    subscribe(topic: string, callback: (data: any) => void, options?: SendOptions): Promise<UnsubscribeFunc>;
-    /**
-     * Unsubscribe from all subscription listeners with the specified topic.
-     *
-     * If `topic` is not provided, then this method will unsubscribe
-     * from all active subscriptions.
-     *
-     * This method is no-op if there are no active subscriptions.
-     *
-     * The related sse connection will be autoclosed if after the
-     * unsubscribe operation there are no active subscriptions left.
-     */
-    unsubscribe(topic?: string): Promise<void>;
-    /**
-     * Unsubscribe from all subscription listeners starting with the specified topic prefix.
-     *
-     * This method is no-op if there are no active subscriptions with the specified topic prefix.
-     *
-     * The related sse connection will be autoclosed if after the
-     * unsubscribe operation there are no active subscriptions left.
-     */
-    unsubscribeByPrefix(keyPrefix: string): Promise<void>;
-    /**
-     * Unsubscribe from all subscriptions matching the specified topic and listener function.
-     *
-     * This method is no-op if there are no active subscription with
-     * the specified topic and listener.
-     *
-     * The related sse connection will be autoclosed if after the
-     * unsubscribe operation there are no active subscriptions left.
-     */
-    unsubscribeByTopicAndListener(topic: string, listener: EventListener): Promise<void>;
-    private hasSubscriptionListeners;
-    private submitSubscriptions;
-    private getSubscriptionsCancelKey;
-    private getSubscriptionsByTopic;
-    private getNonEmptySubscriptionKeys;
-    private addAllSubscriptionListeners;
-    private removeAllSubscriptionListeners;
-    private connect;
-    private initConnect;
-    private hasUnsentSubscriptions;
-    private connectErrorHandler;
-    private disconnect;
+    generateAppleClientSecret(clientId: string, teamId: string, keyId: string, privateKey: string, duration: number, options?: CommonOptions): appleClientSecret;
 }
 declare abstract class CrudService<M> extends BaseService {
     /**
@@ -467,11 +358,11 @@ declare abstract class CrudService<M> extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    getFullList<T = M>(options?: FullListOptions): Promise<Array<T>>;
+    getFullList<T = M>(options?: FullListOptions): Array<T>;
     /**
      * Legacy version of getFullList with explicitly specified batch size.
      */
-    getFullList<T = M>(batch?: number, options?: ListOptions): Promise<Array<T>>;
+    getFullList<T = M>(batch?: number, options?: ListOptions): Array<T>;
     /**
      * Returns paginated items list.
      *
@@ -479,7 +370,7 @@ declare abstract class CrudService<M> extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    getList<T = M>(page?: number, perPage?: number, options?: ListOptions): Promise<ListResult<T>>;
+    getList<T = M>(page?: number, perPage?: number, options?: ListOptions): ListResult<T>;
     /**
      * Returns the first found item by the specified filter.
      *
@@ -493,7 +384,7 @@ declare abstract class CrudService<M> extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    getFirstListItem<T = M>(filter: string, options?: CommonOptions): Promise<T>;
+    getFirstListItem<T = M>(filter: string, options?: CommonOptions): T;
     /**
      * Returns single item by its id.
      *
@@ -503,7 +394,7 @@ declare abstract class CrudService<M> extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    getOne<T = M>(id: string, options?: CommonOptions): Promise<T>;
+    getOne<T = M>(id: string, options?: CommonOptions): T;
     /**
      * Creates a new item.
      *
@@ -513,7 +404,7 @@ declare abstract class CrudService<M> extends BaseService {
      */
     create<T = M>(bodyParams?: {
         [key: string]: any;
-    } | FormData, options?: CommonOptions): Promise<T>;
+    } | FormData, options?: CommonOptions): T;
     /**
      * Updates an existing item by its id.
      *
@@ -523,17 +414,17 @@ declare abstract class CrudService<M> extends BaseService {
      */
     update<T = M>(id: string, bodyParams?: {
         [key: string]: any;
-    } | FormData, options?: CommonOptions): Promise<T>;
+    } | FormData, options?: CommonOptions): T;
     /**
      * Deletes an existing item by its id.
      *
      * @throws {ClientResponseError}
      */
-    delete(id: string, options?: CommonOptions): Promise<boolean>;
+    delete(id: string, options?: CommonOptions): boolean;
     /**
      * Returns a promise with all list items batch fetched at once.
      */
-    protected _getFullList<T = M>(batchSize?: number, options?: ListOptions): Promise<Array<T>>;
+    protected _getFullList<T = M>(batchSize?: number, options?: ListOptions): Array<T>;
 }
 interface RecordAuthResponse<T = RecordModel> {
     /**
@@ -581,25 +472,6 @@ interface AuthMethodsList {
         providers: Array<AuthProviderInfo>;
     };
 }
-interface RecordSubscription<T = RecordModel> {
-    action: string; // eg. create, update, delete
-    record: T;
-}
-type OAuth2UrlCallback = (url: string) => void | Promise<void>;
-interface OAuth2AuthConfig extends SendOptions {
-    // the name of the OAuth2 provider (eg. "google")
-    provider: string;
-    // custom scopes to overwrite the default ones
-    scopes?: Array<string>;
-    // optional record create data
-    createData?: {
-        [key: string]: any;
-    };
-    // optional callback that is triggered after the OAuth2 sign-in/sign-up url generation
-    urlCallback?: OAuth2UrlCallback;
-    // optional query params to send with the PocketBase auth request (eg. fields, expand, etc.)
-    query?: RecordOptions;
-}
 interface OTPResponse {
     otpId: string;
 }
@@ -619,59 +491,34 @@ declare class RecordService<M = RecordModel> extends CrudService<M> {
      */
     get isSuperusers(): boolean;
     // ---------------------------------------------------------------
-    // Realtime handlers
-    // ---------------------------------------------------------------
-    /**
-     * Subscribe to realtime changes to the specified topic ("*" or record id).
-     *
-     * If `topic` is the wildcard "*", then this method will subscribe to
-     * any record changes in the collection.
-     *
-     * If `topic` is a record id, then this method will subscribe only
-     * to changes of the specified record id.
-     *
-     * It's OK to subscribe multiple times to the same topic.
-     * You can use the returned `UnsubscribeFunc` to remove only a single subscription.
-     * Or use `unsubscribe(topic)` if you want to remove all subscriptions attached to the topic.
-     */
-    subscribe<T = M>(topic: string, callback: (data: RecordSubscription<T>) => void, options?: RecordSubscribeOptions): Promise<UnsubscribeFunc>;
-    /**
-     * Unsubscribe from all subscriptions of the specified topic
-     * ("*" or record id).
-     *
-     * If `topic` is not set, then this method will unsubscribe from
-     * all subscriptions associated to the current collection.
-     */
-    unsubscribe(topic?: string): Promise<void>;
-    // ---------------------------------------------------------------
-    // Crud handers
+    // Crud handlers
     // ---------------------------------------------------------------
     /**
      * @inheritdoc
      */
-    getFullList<T = M>(options?: RecordFullListOptions): Promise<Array<T>>;
+    getFullList<T = M>(options?: RecordFullListOptions): Array<T>;
     /**
      * @inheritdoc
      */
-    getFullList<T = M>(batch?: number, options?: RecordListOptions): Promise<Array<T>>;
+    getFullList<T = M>(batch?: number, options?: RecordListOptions): Array<T>;
     /**
      * @inheritdoc
      */
-    getList<T = M>(page?: number, perPage?: number, options?: RecordListOptions): Promise<ListResult<T>>;
+    getList<T = M>(page?: number, perPage?: number, options?: RecordListOptions): ListResult<T>;
     /**
      * @inheritdoc
      */
-    getFirstListItem<T = M>(filter: string, options?: RecordListOptions): Promise<T>;
+    getFirstListItem<T = M>(filter: string, options?: RecordListOptions): T;
     /**
      * @inheritdoc
      */
-    getOne<T = M>(id: string, options?: RecordOptions): Promise<T>;
+    getOne<T = M>(id: string, options?: RecordOptions): T;
     /**
      * @inheritdoc
      */
     create<T = M>(bodyParams?: {
         [key: string]: any;
-    } | FormData, options?: RecordOptions): Promise<T>;
+    } | FormData, options?: RecordOptions): T;
     /**
      * @inheritdoc
      *
@@ -680,14 +527,14 @@ declare class RecordService<M = RecordModel> extends CrudService<M> {
      */
     update<T = M>(id: string, bodyParams?: {
         [key: string]: any;
-    } | FormData, options?: RecordOptions): Promise<T>;
+    } | FormData, options?: RecordOptions): T;
     /**
      * @inheritdoc
      *
      * If the current `client.authStore.record` matches with the deleted id,
      * then on success the `client.authStore` will be cleared.
      */
-    delete(id: string, options?: CommonOptions): Promise<boolean>;
+    delete(id: string, options?: CommonOptions): boolean;
     // ---------------------------------------------------------------
     // Auth handlers
     // ---------------------------------------------------------------
@@ -700,7 +547,7 @@ declare class RecordService<M = RecordModel> extends CrudService<M> {
      *
      * @throws {ClientResponseError}
      */
-    listAuthMethods(options?: CommonOptions): Promise<AuthMethodsList>;
+    listAuthMethods(options?: CommonOptions): AuthMethodsList;
     /**
      * Authenticate a single auth collection record via its username/email and password.
      *
@@ -711,7 +558,7 @@ declare class RecordService<M = RecordModel> extends CrudService<M> {
      *
      * @throws {ClientResponseError}
      */
-    authWithPassword<T = M>(usernameOrEmail: string, password: string, options?: RecordOptions): Promise<RecordAuthResponse<T>>;
+    authWithPassword<T = M>(usernameOrEmail: string, password: string, options?: RecordOptions): RecordAuthResponse<T>;
     /**
      * Authenticate a single auth collection record with OAuth2 code.
      *
@@ -727,79 +574,7 @@ declare class RecordService<M = RecordModel> extends CrudService<M> {
      */
     authWithOAuth2Code<T = M>(provider: string, code: string, codeVerifier: string, redirectURL: string, createData?: {
         [key: string]: any;
-    }, options?: RecordOptions): Promise<RecordAuthResponse<T>>;
-    /**
-     * @deprecated
-     * Consider using authWithOAuth2Code(provider, code, codeVerifier, redirectURL, createdData, options?).
-     */
-    authWithOAuth2Code<T = M>(provider: string, code: string, codeVerifier: string, redirectURL: string, createData?: {
-        [key: string]: any;
-    }, body?: any, query?: any): Promise<RecordAuthResponse<T>>;
-    /**
-     * @deprecated This form of authWithOAuth2 is deprecated.
-     *
-     * Please use `authWithOAuth2Code()` OR its simplified realtime version
-     * as shown in https://pocketbase.io/docs/authentication/#oauth2-integration.
-     */
-    authWithOAuth2<T = M>(provider: string, code: string, codeVerifier: string, redirectURL: string, createData?: {
-        [key: string]: any;
-    }, bodyParams?: {
-        [key: string]: any;
-    }, queryParams?: RecordOptions): Promise<RecordAuthResponse<T>>;
-    /**
-     * Authenticate a single auth collection record with OAuth2
-     * **without custom redirects, deeplinks or even page reload**.
-     *
-     * This method initializes a one-off realtime subscription and will
-     * open a popup window with the OAuth2 vendor page to authenticate.
-     * Once the external OAuth2 sign-in/sign-up flow is completed, the popup
-     * window will be automatically closed and the OAuth2 data sent back
-     * to the user through the previously established realtime connection.
-     *
-     * You can specify an optional `urlCallback` prop to customize
-     * the default url `window.open` behavior.
-     *
-     * On success, this method also automatically updates
-     * the client's AuthStore data and returns:
-     * - the authentication token
-     * - the authenticated record model
-     * - the OAuth2 account data (eg. name, email, avatar, etc.)
-     *
-     * Example:
-     *
-     * ```js
-     * const authData = await pb.collection("users").authWithOAuth2({
-     *     provider: "google",
-     * })
-     * ```
-     *
-     * Note1: When creating the OAuth2 app in the provider dashboard
-     * you have to configure `https://yourdomain.com/api/oauth2-redirect`
-     * as redirect URL.
-     *
-     * Note2: Safari may block the default `urlCallback` popup because
-     * it doesn't allow `window.open` calls as part of an `async` click functions.
-     * To workaround this you can either change your click handler to not be marked as `async`
-     * OR manually call `window.open` before your `async` function and use the
-     * window reference in your own custom `urlCallback` (see https://github.com/pocketbase/pocketbase/discussions/2429#discussioncomment-5943061).
-     * For example:
-     * ```js
-     * <button id="btn">Login with Gitlab</button>
-     * ...
-     * document.getElementById("btn").addEventListener("click", () => {
-     *     pb.collection("users").authWithOAuth2({
-     *         provider: "gitlab",
-     *     }).then((authData) => {
-     *         console.log(authData)
-     *     }).catch((err) => {
-     *         console.log(err, err.originalError);
-     *     });
-     * })
-     * ```
-     *
-     * @throws {ClientResponseError}
-     */
-    authWithOAuth2<T = M>(options: OAuth2AuthConfig): Promise<RecordAuthResponse<T>>;
+    }, options?: RecordOptions): RecordAuthResponse<T>;
     /**
      * Refreshes the current authenticated record instance and
      * returns a new token and record data.
@@ -808,45 +583,25 @@ declare class RecordService<M = RecordModel> extends CrudService<M> {
      *
      * @throws {ClientResponseError}
      */
-    authRefresh<T = M>(options?: RecordOptions): Promise<RecordAuthResponse<T>>;
-    /**
-     * @deprecated
-     * Consider using authRefresh(options?).
-     */
-    authRefresh<T = M>(body?: any, query?: any): Promise<RecordAuthResponse<T>>;
+    authRefresh<T = M>(options?: RecordOptions): RecordAuthResponse<T>;
     /**
      * Sends auth record password reset request.
      *
      * @throws {ClientResponseError}
      */
-    requestPasswordReset(email: string, options?: CommonOptions): Promise<boolean>;
-    /**
-     * @deprecated
-     * Consider using requestPasswordReset(email, options?).
-     */
-    requestPasswordReset(email: string, body?: any, query?: any): Promise<boolean>;
+    requestPasswordReset(email: string, options?: CommonOptions): boolean;
     /**
      * Confirms auth record password reset request.
      *
      * @throws {ClientResponseError}
      */
-    confirmPasswordReset(passwordResetToken: string, password: string, passwordConfirm: string, options?: CommonOptions): Promise<boolean>;
-    /**
-     * @deprecated
-     * Consider using confirmPasswordReset(passwordResetToken, password, passwordConfirm, options?).
-     */
-    confirmPasswordReset(passwordResetToken: string, password: string, passwordConfirm: string, body?: any, query?: any): Promise<boolean>;
+    confirmPasswordReset(passwordResetToken: string, password: string, passwordConfirm: string, options?: CommonOptions): boolean;
     /**
      * Sends auth record verification email request.
      *
      * @throws {ClientResponseError}
      */
-    requestVerification(email: string, options?: CommonOptions): Promise<boolean>;
-    /**
-     * @deprecated
-     * Consider using requestVerification(email, options?).
-     */
-    requestVerification(email: string, body?: any, query?: any): Promise<boolean>;
+    requestVerification(email: string, options?: CommonOptions): boolean;
     /**
      * Confirms auth record email verification request.
      *
@@ -855,23 +610,13 @@ declare class RecordService<M = RecordModel> extends CrudService<M> {
      *
      * @throws {ClientResponseError}
      */
-    confirmVerification(verificationToken: string, options?: CommonOptions): Promise<boolean>;
-    /**
-     * @deprecated
-     * Consider using confirmVerification(verificationToken, options?).
-     */
-    confirmVerification(verificationToken: string, body?: any, query?: any): Promise<boolean>;
+    confirmVerification(verificationToken: string, options?: CommonOptions): boolean;
     /**
      * Sends an email change request to the authenticated record model.
      *
      * @throws {ClientResponseError}
      */
-    requestEmailChange(newEmail: string, options?: CommonOptions): Promise<boolean>;
-    /**
-     * @deprecated
-     * Consider using requestEmailChange(newEmail, options?).
-     */
-    requestEmailChange(newEmail: string, body?: any, query?: any): Promise<boolean>;
+    requestEmailChange(newEmail: string, options?: CommonOptions): boolean;
     /**
      * Confirms auth record's new email address.
      *
@@ -880,34 +625,13 @@ declare class RecordService<M = RecordModel> extends CrudService<M> {
      *
      * @throws {ClientResponseError}
      */
-    confirmEmailChange(emailChangeToken: string, password: string, options?: CommonOptions): Promise<boolean>;
-    /**
-     * @deprecated
-     * Consider using confirmEmailChange(emailChangeToken, password, options?).
-     */
-    confirmEmailChange(emailChangeToken: string, password: string, body?: any, query?: any): Promise<boolean>;
-    /**
-     * @deprecated use collection("_externalAuths").*
-     *
-     * Lists all linked external auth providers for the specified auth record.
-     *
-     * @throws {ClientResponseError}
-     */
-    listExternalAuths(recordId: string, options?: CommonOptions): Promise<Array<RecordModel>>;
-    /**
-     * @deprecated use collection("_externalAuths").*
-     *
-     * Unlink a single external auth provider from the specified auth record.
-     *
-     * @throws {ClientResponseError}
-     */
-    unlinkExternalAuth(recordId: string, provider: string, options?: CommonOptions): Promise<boolean>;
+    confirmEmailChange(emailChangeToken: string, password: string, options?: CommonOptions): boolean;
     /**
      * Sends auth record OTP to the provided email.
      *
      * @throws {ClientResponseError}
      */
-    requestOTP(email: string, options?: CommonOptions): Promise<OTPResponse>;
+    requestOTP(email: string, options?: CommonOptions): OTPResponse;
     /**
      * Authenticate a single auth collection record via OTP.
      *
@@ -918,7 +642,7 @@ declare class RecordService<M = RecordModel> extends CrudService<M> {
      *
      * @throws {ClientResponseError}
      */
-    authWithOTP<T = M>(otpId: string, password: string, options?: CommonOptions): Promise<RecordAuthResponse<T>>;
+    authWithOTP<T = M>(otpId: string, password: string, options?: CommonOptions): RecordAuthResponse<T>;
     /**
      * Impersonate authenticates with the specified recordId and
      * returns a new client with the received auth token in a memory store.
@@ -930,13 +654,7 @@ declare class RecordService<M = RecordModel> extends CrudService<M> {
      *
      * @throws {ClientResponseError}
      */
-    impersonate(recordId: string, duration: number, options?: CommonOptions): Promise<Client>;
-    // ---------------------------------------------------------------
-    // very rudimentary url query params replacement because at the moment
-    // URL (and URLSearchParams) doesn't seem to be fully supported in React Native
-    //
-    // note: for details behind some of the decode/encode parsing check https://unixpapa.com/js/querystring.html
-    private _replaceQueryParams;
+    impersonate(recordId: string, duration: number, options?: CommonOptions): Client;
 }
 declare class CollectionService extends CrudService<CollectionModel> {
     /**
@@ -952,22 +670,22 @@ declare class CollectionService extends CrudService<CollectionModel> {
      *
      * @throws {ClientResponseError}
      */
-    import(collections: Array<CollectionModel>, deleteMissing?: boolean, options?: CommonOptions): Promise<true>;
+    import(collections: Array<CollectionModel>, deleteMissing?: boolean, options?: CommonOptions): boolean;
     /**
      * Returns type indexed map with scaffolded collection models
      * populated with their default field values.
      *
      * @throws {ClientResponseError}
      */
-    getScaffolds(options?: CommonOptions): Promise<{
+    getScaffolds(options?: CommonOptions): {
         [key: string]: CollectionModel;
-    }>;
+    };
     /**
      * Deletes all records associated with the specified collection.
      *
      * @throws {ClientResponseError}
      */
-    truncate(collectionIdOrName: string, options?: CommonOptions): Promise<true>;
+    truncate(collectionIdOrName: string, options?: CommonOptions): boolean;
 }
 interface HourlyStats {
     total: number;
@@ -979,7 +697,7 @@ declare class LogService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    getList(page?: number, perPage?: number, options?: ListOptions): Promise<ListResult<LogModel>>;
+    getList(page?: number, perPage?: number, options?: ListOptions): ListResult<LogModel>;
     /**
      * Returns a single log by its id.
      *
@@ -987,13 +705,13 @@ declare class LogService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    getOne(id: string, options?: CommonOptions): Promise<LogModel>;
+    getOne(id: string, options?: CommonOptions): LogModel;
     /**
      * Returns logs statistics.
      *
      * @throws {ClientResponseError}
      */
-    getStats(options?: LogStatsOptions): Promise<Array<HourlyStats>>;
+    getStats(options?: LogStatsOptions): Array<HourlyStats>;
 }
 interface HealthCheckResponse {
     code: number;
@@ -1008,7 +726,7 @@ declare class HealthService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    check(options?: CommonOptions): Promise<HealthCheckResponse>;
+    check(options?: CommonOptions): HealthCheckResponse;
 }
 declare class FileService extends BaseService {
     /**
@@ -1028,7 +746,7 @@ declare class FileService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    getToken(options?: CommonOptions): Promise<string>;
+    getToken(options?: CommonOptions): string;
 }
 interface BackupFileInfo {
     key: string;
@@ -1041,13 +759,13 @@ declare class BackupService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    getFullList(options?: CommonOptions): Promise<Array<BackupFileInfo>>;
+    getFullList(options?: CommonOptions): Array<BackupFileInfo>;
     /**
      * Initializes a new backup.
      *
      * @throws {ClientResponseError}
      */
-    create(basename: string, options?: CommonOptions): Promise<boolean>;
+    create(basename: string, options?: CommonOptions): boolean;
     /**
      * Uploads an existing backup file.
      *
@@ -1063,23 +781,19 @@ declare class BackupService extends BaseService {
      */
     upload(bodyParams: {
         [key: string]: any;
-    } | FormData, options?: CommonOptions): Promise<boolean>;
+    } | FormData, options?: CommonOptions): boolean;
     /**
      * Deletes a single backup file.
      *
      * @throws {ClientResponseError}
      */
-    delete(key: string, options?: CommonOptions): Promise<boolean>;
+    delete(key: string, options?: CommonOptions): boolean;
     /**
      * Initializes an app data restore from an existing backup.
      *
      * @throws {ClientResponseError}
      */
-    restore(key: string, options?: CommonOptions): Promise<boolean>;
-    /**
-     * @deprecated Please use `getDownloadURL()`.
-     */
-    getDownloadUrl(token: string, key: string): string;
+    restore(key: string, options?: CommonOptions): boolean;
     /**
      * Builds a download url for a single existing backup using a
      * superuser file token and the backup file key.
@@ -1098,13 +812,13 @@ declare class CronService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    getFullList(options?: CommonOptions): Promise<Array<CronJob>>;
+    getFullList(options?: CommonOptions): Array<CronJob>;
     /**
      * Runs the specified cron job.
      *
      * @throws {ClientResponseError}
      */
-    run(jobId: string, options?: CommonOptions): Promise<boolean>;
+    run(jobId: string, options?: CommonOptions): boolean;
 }
 interface BatchRequest {
     method: string;
@@ -1135,7 +849,7 @@ declare class BatchService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    send(options?: SendOptions): Promise<Array<BatchRequestResult>>;
+    send(options?: SendOptions): Array<BatchRequestResult>;
 }
 declare class SubBatchService {
     private requests;
@@ -1167,6 +881,17 @@ declare class SubBatchService {
     delete(id: string, options?: SendOptions): void;
     private prepareRequest;
 }
+type Response = {
+    statusCode: number;
+    headers: {
+        [key: string]: Array<string>;
+    };
+    cookies: {
+        [key: string]: http.Cookie;
+    };
+    raw: string;
+    json: any;
+};
 interface BeforeSendResult {
     [key: string]: any;
     url?: string;
@@ -1211,7 +936,7 @@ declare class Client {
      * };
      * ```
      */
-    beforeSend?: (url: string, options: SendOptions) => BeforeSendResult | Promise<BeforeSendResult>;
+    beforeSend?: (url: string, options: SendOptions) => BeforeSendResult;
     /**
      * Hook that get triggered after successfully sending the fetch request,
      * allowing you to inspect/modify the response object and its parsed data.
@@ -1262,7 +987,6 @@ declare class Client {
     /**
      * An instance of the service that handles the **Realtime APIs**.
      */
-    readonly realtime: RealtimeService;
     /**
      * An instance of the service that handles the **Health APIs**.
      */
@@ -1275,9 +999,7 @@ declare class Client {
      * An instance of the service that handles the **Cron APIs**.
      */
     readonly crons: CronService;
-    private cancelControllers;
     private recordServices;
-    private enableAutoCancellation;
     constructor(baseURL?: string, authStore?: BaseAuthStore | null, lang?: string);
     /**
      * @deprecated
@@ -1325,27 +1047,6 @@ declare class Client {
      * Returns the RecordService associated to the specified collection.
      */
     collection<M = RecordModel>(idOrName: string): RecordService<M>;
-    /**
-     * Globally enable or disable auto cancellation for pending duplicated requests.
-     */
-    /**
-     * Globally enable or disable auto cancellation for pending duplicated requests.
-     */
-    autoCancellation(enable: boolean): Client;
-    /**
-     * Cancels single request by its cancellation key.
-     */
-    /**
-     * Cancels single request by its cancellation key.
-     */
-    cancelRequest(requestKey: string): Client;
-    /**
-     * Cancels all pending requests.
-     */
-    /**
-     * Cancels all pending requests.
-     */
-    cancelAllRequests(): Client;
     /**
      * Constructs a filter expression with placeholders populated from a parameters object.
      *
@@ -1428,7 +1129,7 @@ declare class Client {
      *
      * @throws {ClientResponseError}
      */
-    send<T = any>(path: string, options: SendOptions): Promise<T>;
+    send<T = any>(path: string, options: SendOptions): T;
     /**
      * Shallow copy the provided object and takes care to initialize
      * any options required to preserve the backward compatability.
@@ -1443,6 +1144,7 @@ declare class Client {
      * @param  {SendOptions} options
      * @return {SendOptions}
      */
+    // @ts-ignore
     private initSendOptions;
     /**
      * Extracts the header with the provided name in case-insensitive manner.

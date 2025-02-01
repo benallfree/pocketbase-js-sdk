@@ -19,11 +19,11 @@ export class CollectionService extends CrudService<CollectionModel> {
      *
      * @throws {ClientResponseError}
      */
-    async import(
+    import(
         collections: Array<CollectionModel>,
         deleteMissing: boolean = false,
         options?: CommonOptions,
-    ): Promise<true> {
+    ): boolean {
         options = Object.assign(
             {
                 method: "PUT",
@@ -35,7 +35,8 @@ export class CollectionService extends CrudService<CollectionModel> {
             options,
         );
 
-        return this.client.send(this.baseCrudPath + "/import", options).then(() => true);
+        this.client.send(this.baseCrudPath + "/import", options);
+        return true;
     }
 
     /**
@@ -44,9 +45,7 @@ export class CollectionService extends CrudService<CollectionModel> {
      *
      * @throws {ClientResponseError}
      */
-    async getScaffolds(
-        options?: CommonOptions,
-    ): Promise<{ [key: string]: CollectionModel }> {
+    getScaffolds(options?: CommonOptions): { [key: string]: CollectionModel } {
         options = Object.assign(
             {
                 method: "GET",
@@ -62,7 +61,7 @@ export class CollectionService extends CrudService<CollectionModel> {
      *
      * @throws {ClientResponseError}
      */
-    async truncate(collectionIdOrName: string, options?: CommonOptions): Promise<true> {
+    truncate(collectionIdOrName: string, options?: CommonOptions): boolean {
         options = Object.assign(
             {
                 method: "DELETE",
@@ -70,14 +69,13 @@ export class CollectionService extends CrudService<CollectionModel> {
             options,
         );
 
-        return this.client
-            .send(
-                this.baseCrudPath +
-                    "/" +
-                    encodeURIComponent(collectionIdOrName) +
-                    "/truncate",
-                options,
-            )
-            .then(() => true);
+        this.client.send(
+            this.baseCrudPath +
+                "/" +
+                encodeURIComponent(collectionIdOrName) +
+                "/truncate",
+            options,
+        );
+        return true;
     }
 }

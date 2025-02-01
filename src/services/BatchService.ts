@@ -43,7 +43,7 @@ export class BatchService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async send(options?: SendOptions): Promise<Array<BatchRequestResult>> {
+    send(options?: SendOptions): Array<BatchRequestResult> {
         const formData = new FormData();
 
         const jsonData = [];

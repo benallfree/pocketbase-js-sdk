@@ -14,11 +14,7 @@ export class LogService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async getList(
-        page = 1,
-        perPage = 30,
-        options?: ListOptions,
-    ): Promise<ListResult<LogModel>> {
+    getList(page = 1, perPage = 30, options?: ListOptions): ListResult<LogModel> {
         options = Object.assign({ method: "GET" }, options);
 
         options.query = Object.assign(
@@ -39,7 +35,7 @@ export class LogService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async getOne(id: string, options?: CommonOptions): Promise<LogModel> {
+    getOne(id: string, options?: CommonOptions): LogModel {
         if (!id) {
             throw new ClientResponseError({
                 url: this.client.buildURL("/api/logs/"),
@@ -67,7 +63,7 @@ export class LogService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async getStats(options?: LogStatsOptions): Promise<Array<HourlyStats>> {
+    getStats(options?: LogStatsOptions): Array<HourlyStats> {
         options = Object.assign(
             {
                 method: "GET",

@@ -13,7 +13,7 @@ export class BackupService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async getFullList(options?: CommonOptions): Promise<Array<BackupFileInfo>> {
+    getFullList(options?: CommonOptions): Array<BackupFileInfo> {
         options = Object.assign(
             {
                 method: "GET",
@@ -29,7 +29,7 @@ export class BackupService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async create(basename: string, options?: CommonOptions): Promise<boolean> {
+    create(basename: string, options?: CommonOptions): boolean {
         options = Object.assign(
             {
                 method: "POST",
@@ -40,7 +40,8 @@ export class BackupService extends BaseService {
             options,
         );
 
-        return this.client.send("/api/backups", options).then(() => true);
+        this.client.send("/api/backups", options);
+        return true;
     }
 
     /**
@@ -56,10 +57,10 @@ export class BackupService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async upload(
+    upload(
         bodyParams: { [key: string]: any } | FormData,
         options?: CommonOptions,
-    ): Promise<boolean> {
+    ): boolean {
         options = Object.assign(
             {
                 method: "POST",
@@ -68,7 +69,8 @@ export class BackupService extends BaseService {
             options,
         );
 
-        return this.client.send("/api/backups/upload", options).then(() => true);
+        this.client.send("/api/backups/upload", options);
+        return true;
     }
 
     /**
@@ -76,7 +78,7 @@ export class BackupService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async delete(key: string, options?: CommonOptions): Promise<boolean> {
+    delete(key: string, options?: CommonOptions): boolean {
         options = Object.assign(
             {
                 method: "DELETE",
@@ -84,9 +86,8 @@ export class BackupService extends BaseService {
             options,
         );
 
-        return this.client
-            .send(`/api/backups/${encodeURIComponent(key)}`, options)
-            .then(() => true);
+        this.client.send(`/api/backups/${encodeURIComponent(key)}`, options);
+        return true;
     }
 
     /**
@@ -94,7 +95,7 @@ export class BackupService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async restore(key: string, options?: CommonOptions): Promise<boolean> {
+    restore(key: string, options?: CommonOptions): boolean {
         options = Object.assign(
             {
                 method: "POST",
@@ -102,19 +103,8 @@ export class BackupService extends BaseService {
             options,
         );
 
-        return this.client
-            .send(`/api/backups/${encodeURIComponent(key)}/restore`, options)
-            .then(() => true);
-    }
-
-    /**
-     * @deprecated Please use `getDownloadURL()`.
-     */
-    getDownloadUrl(token: string, key: string): string {
-        console.warn(
-            "Please replace pb.backups.getDownloadUrl() with pb.backups.getDownloadURL()",
-        );
-        return this.getDownloadURL(token, key);
+        this.client.send(`/api/backups/${encodeURIComponent(key)}/restore`, options);
+        return true;
     }
 
     /**

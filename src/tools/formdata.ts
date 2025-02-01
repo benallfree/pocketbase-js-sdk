@@ -4,14 +4,7 @@
 export function isFile(val: any): boolean {
     return (
         (typeof Blob !== "undefined" && val instanceof Blob) ||
-        (typeof File !== "undefined" && val instanceof File) ||
-        // check for React Native file object format
-        // (see https://github.com/pocketbase/pocketbase/discussions/2002#discussioncomment-5254168)
-        (val !== null &&
-            typeof val === "object" &&
-            val.uri &&
-            ((typeof navigator !== "undefined" && navigator.product === "ReactNative") ||
-                (typeof global !== "undefined" && (global as any).HermesInternal)))
+        (typeof File !== "undefined" && val instanceof File)
     );
 }
 

@@ -1,10 +1,5 @@
-// @todo remove after https://github.com/reactwg/react-native-releases/issues/287
-const isReactNative =
-    (typeof navigator !== "undefined" && navigator.product === "ReactNative") ||
-    (typeof global !== "undefined" && (global as any).HermesInternal);
-
 let atobPolyfill: Function;
-if (typeof atob === "function" && !isReactNative) {
+if (typeof atob === "function") {
     atobPolyfill = atob;
 } else {
     /**

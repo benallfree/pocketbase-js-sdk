@@ -58,7 +58,7 @@ export class FileService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async getToken(options?: CommonOptions): Promise<string> {
+    getToken(options?: CommonOptions): string {
         options = Object.assign(
             {
                 method: "POST",
@@ -66,8 +66,7 @@ export class FileService extends BaseService {
             options,
         );
 
-        return this.client
-            .send("/api/files/token", options)
-            .then((data) => data?.token || "");
+        const data = this.client.send("/api/files/token", options);
+        return data?.token || "";
     }
 }

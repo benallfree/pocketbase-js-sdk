@@ -1,8 +1,11 @@
 {
     "version": "0.25.1",
-    "name": "pocketbase",
-    "description": "PocketBase JavaScript SDK",
-    "author": "Gani Georgiev",
+    "name": "pocketbase-js-sdk-jsvm",
+    "description": "PocketBase JavaScript SDK for JSVM",
+    "authors": [
+        "Gani Georgiev <gani.georgiev@gmail.com>",
+        "Ben Allfree <ben@pockethost.io>"
+    ],
     "license": "MIT",
     "repository": {
         "type": "git",

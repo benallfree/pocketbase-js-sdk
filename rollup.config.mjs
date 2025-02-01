@@ -13,12 +13,12 @@ function basePlugins() {
         // minify if we're building for production
         // (aka. npm run build instead of npm run dev)
         isProduction && terser({
-            keep_classnames: true,
-            keep_fnames: true,
-            output: {
-                comments: false,
-            },
-        }),
+                keep_classnames: true,
+                keep_fnames: true,
+                output: {
+                    comments: false,
+                },
+            }),
     ]
 }
 
@@ -86,22 +86,4 @@ export default [
         watch: { clearScreen: false },
     },
 
-    // !!!
-    // @deprecated - kept only for backwards compatibility and will be removed in v1.0.0
-    // !!!
-    //
-    // Browser-friendly iife bundle (only the PocketBase client as default export).
-    {
-        input: 'src/Client.ts',
-        output: [
-            {
-                name:      'PocketBase',
-                file:      'dist/pocketbase.iife.js',
-                format:    'iife',
-                sourcemap: isProduction,
-            },
-        ],
-        plugins: basePlugins(),
-        watch: { clearScreen: false },
-    },
 ];

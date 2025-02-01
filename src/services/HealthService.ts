@@ -13,7 +13,7 @@ export class HealthService extends BaseService {
      *
      * @throws {ClientResponseError}
      */
-    async check(options?: CommonOptions): Promise<HealthCheckResponse> {
+    check(options?: CommonOptions): HealthCheckResponse {
         options = Object.assign(
             {
                 method: "GET",
