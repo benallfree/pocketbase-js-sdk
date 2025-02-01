@@ -1,3 +1,7 @@
+## 0.25.100001 (@benallfree)
+
+- Initial JSVM release.
+
 ## 0.25.1
 
 - Ignore query parameters with `undefined` value ([#330](https://github.com/pocketbase/js-sdk/issues/330)).
