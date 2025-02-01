@@ -1,5 +1,5 @@
 {
-    "version": "0.25.10001",
+    "version": "0.25.10002",
     "name": "pocketbase-js-sdk-jsvm",
     "description": "PocketBase JavaScript SDK for JSVM",
     "authors": [
@@ -9,7 +9,7 @@
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "git://github.com/pocketbase/js-sdk.git"
+        "url": "git://github.com/benallfree/pocketbase-js-sdk.git"
     },
     "exports": {
         ".": "./dist/pocketbase.es.mjs",
@@ -23,7 +23,9 @@
     "keywords": [
         "pocketbase",
         "pocketbase-js",
+        "pocketbase-jsvm",
         "js-sdk",
+        "js-jsvm-sdk",
         "javascript-sdk",
         "pocketbase-sdk"
     ],
@@ -40,6 +42,7 @@
         "prepublishOnly": "npm run build"
     },
     "devDependencies": {
+        "@changesets/cli": "^2.27.12",
         "@rollup/plugin-terser": "^0.4.3",
         "prettier": "3.2.4",
         "rollup": "^4.0.0",
