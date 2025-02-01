@@ -1,3 +1,23 @@
+
+-------------
+
+**NOTICE: This is a fork of the original PocketBase JavaScript SDK.**
+
+It is maintained by @benallfree and has been modified to work inside the PocketBase JSVM.
+
+This package is published as `pocketbase-js-sdk-jsvm` on npm using [upstream version anchoring](https://gist.github.com/benallfree/6baa35e925df06b35b2df755f5776cc7).
+
+Changes:
+- Removed all async/await and Promise usage (not supported in JSVM)
+- Removed realtime features (not supported in JSVM)
+- Removed `AsyncAuthStore` (not supported in JSVM)
+- `fetch()` function uses [$http.send](https://pocketbase.io/jsvm/functions/_http.send.html) API
+- Removed all deprecated code
+- Removed autocancellation (not applicable in JSVM)
+
+--------
+
+
 PocketBase JavaScript SDK
 ======================================================================
 
