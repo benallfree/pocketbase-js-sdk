@@ -1,4 +1,10 @@
-## 0.25.10002 (@benallfree)
+## 0.25.10003
+
+### Patch Changes
+
+-   57b9b47: Fix: $http.send logic
+
+## 0.25.10002
 
 ### Patch Changes
 
