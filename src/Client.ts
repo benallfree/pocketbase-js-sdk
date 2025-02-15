@@ -377,17 +377,17 @@ export default class Client {
 
         // send the request
         try {
-            console.log(`fetching ${url} with method ${options.method}`);
-            const response = fetchFunc({
+            const args = {
                 url: url,
-                // method: options.method,
-                // headers: options.headers,
-                // body: options.body,
-            });
+                method: options.method,
+                headers: options.headers,
+                body: options.body,
+            };
+            const response = fetchFunc(args);
             let data: any = {};
 
             try {
-                data = response.json();
+                data = response.json;
             } catch (_) {
                 // all api responses are expected to return json
                 // with the exception of the realtime event and 204
