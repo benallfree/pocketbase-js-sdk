@@ -1,5 +1,11 @@
 ## 0.25.10003
 
+## 0.25.10004
+
+### Patch Changes
+
+-   8cd3225: Fix: fixed package main to load cjs
+
 ### Patch Changes
 
 -   57b9b47: Fix: $http.send logic
