@@ -9,3 +9,6 @@ tsconfig-test.json
 README.html
 CHANGELOG.html
 LICENSE.html
+
+# local PocketBase test instance
+pbtest
