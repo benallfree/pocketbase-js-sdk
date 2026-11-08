@@ -1,6 +1,6 @@
 import { CrudService } from "@/services/CrudService";
-import { CollectionModel } from "@/tools/dtos";
 import { CommonOptions } from "@/tools/options";
+import { CollectionModel, ConfigurableOAuth2Provider } from "@/tools/dtos";
 
 export class CollectionService extends CrudService<CollectionModel> {
     /**
@@ -40,23 +40,6 @@ export class CollectionService extends CrudService<CollectionModel> {
     }
 
     /**
-     * Returns type indexed map with scaffolded collection models
-     * populated with their default field values.
-     *
-     * @throws {ClientResponseError}
-     */
-    getScaffolds(options?: CommonOptions): { [key: string]: CollectionModel } {
-        options = Object.assign(
-            {
-                method: "GET",
-            },
-            options,
-        );
-
-        return this.client.send(this.baseCrudPath + "/meta/scaffolds", options);
-    }
-
-    /**
      * Deletes all records associated with the specified collection.
      *
      * @throws {ClientResponseError}
@@ -77,5 +60,58 @@ export class CollectionService extends CrudService<CollectionModel> {
             options,
         );
         return true;
+    }
+
+    /**
+     * Returns type indexed map with scaffolded collection models
+     * populated with their default field values.
+     *
+     * @throws {ClientResponseError}
+     */
+    getScaffolds(options?: CommonOptions): { [key: string]: CollectionModel } {
+        options = Object.assign(
+            {
+                method: "GET",
+            },
+            options,
+        );
+
+        return this.client.send(this.baseCrudPath + "/meta/scaffolds", options);
+    }
+
+    /**
+     * Returns a list with all configurable OAuth2 providers.
+     *
+     * @throws {ClientResponseError}
+     */
+    getAllOAuth2Providers(options?: CommonOptions): Array<ConfigurableOAuth2Provider> {
+        options = Object.assign(
+            {
+                method: "GET",
+            },
+            options,
+        );
+
+        return this.client.send(this.baseCrudPath + "/meta/oauth2-providers", options);
+    }
+
+    /**
+     * Executes the specified view query and returns a sample of the resulting records.
+     *
+     * @throws {ClientResponseError}
+     */
+    dryRunViewQuery(
+        query: string,
+        options?: CommonOptions,
+    ): Array<{ [key: string]: any }> {
+        options = Object.assign(
+            {
+                method: "POST",
+                body: { query },
+            },
+            options,
+        );
+
+        return this.client.send(this.baseCrudPath + "/meta/dry-run-view", options);
     }
 }

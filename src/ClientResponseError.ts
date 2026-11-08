@@ -17,10 +17,11 @@ export class ClientResponseError extends Error {
         Object.setPrototypeOf(this, ClientResponseError.prototype);
 
         if (errData !== null && typeof errData === "object") {
+            this.originalError = errData.originalError;
             this.url = typeof errData.url === "string" ? errData.url : "";
             this.status = typeof errData.status === "number" ? errData.status : 0;
+
             this.isAbort = !!errData.isAbort;
-            this.originalError = errData.originalError;
 
             if (errData.response !== null && typeof errData.response === "object") {
                 this.response = errData.response;
@@ -35,10 +36,6 @@ export class ClientResponseError extends Error {
             this.originalError = errData;
         }
 
-        if (typeof DOMException !== "undefined" && errData instanceof DOMException) {
-            this.isAbort = true;
-        }
-
         this.name = "ClientResponseError " + this.status;
         this.message = this.response?.message;
         if (!this.message) {
@@ -46,9 +43,13 @@ export class ClientResponseError extends Error {
                 this.message =
                     "Failed to connect to the PocketBase server. Try changing the SDK URL from localhost to 127.0.0.1 (https://github.com/pocketbase/js-sdk/issues/21).";
             } else {
-                this.message = "Something went wrong while processing your request.";
+                this.message = "Something went wrong.";
             }
         }
+
+        // set this.cause so that JS debugging tools can automatically connect
+        // the dots between the original error and the wrapped one
+        this.cause = this.originalError;
     }
 
     /**

@@ -17,7 +17,7 @@ export function isFormData(body: any): boolean {
         // we are checking the constructor name because FormData
         // is not available natively in some environments and the
         // polyfill(s) may not be globally accessible
-        (body.constructor.name === "FormData" ||
+        (body.constructor?.name === "FormData" ||
             // fallback to global FormData instance check
             // note: this is needed because the constructor.name could be different in case of
             //       custom global FormData implementation, eg. React Native on Android/iOS
@@ -61,6 +61,12 @@ export function convertToFormDataIfNeeded(body: any): any {
 
     for (const key in body) {
         const val = body[key];
+
+        // skip undefined values for consistency with JSON.stringify
+        // (see https://github.com/pocketbase/pocketbase/issues/6731#issuecomment-2812382827)
+        if (typeof val === "undefined") {
+            continue;
+        }
 
         if (typeof val === "object" && !hasFileField({ data: val })) {
             // send json-like values as jsonPayload to avoid the implicit string value normalization

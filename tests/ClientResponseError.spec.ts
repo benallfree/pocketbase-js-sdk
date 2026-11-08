@@ -28,10 +28,7 @@ describe("ClientResponseError", function () {
             assert.deepEqual(err.response, {});
             assert.equal(err.isAbort, false);
             assert.equal(err.originalError, "test");
-            assert.equal(
-                err.message,
-                "Something went wrong while processing your request.",
-            );
+            assert.equal(err.message, "Something went wrong.");
         });
 
         test("with plain error", function () {
@@ -43,10 +40,7 @@ describe("ClientResponseError", function () {
             assert.deepEqual(err.response, {});
             assert.equal(err.isAbort, false);
             assert.equal(err.originalError, plainErr);
-            assert.equal(
-                err.message,
-                "Something went wrong while processing your request.",
-            );
+            assert.equal(err.message, "Something went wrong.");
         });
 
         test("with ClientResponseError error", function () {
@@ -67,8 +61,21 @@ describe("ClientResponseError", function () {
             assert.equal(err.message, "test message");
         });
 
-        test("with abort error", function () {
-            const err0 = new DOMException("test");
+        // Safari may throw this on response.json() failure
+        test("with DOMException.SyntaxError", function () {
+            const err0 = new DOMException("test_err", "SyntaxError");
+            const err = new ClientResponseError(err0);
+
+            assert.equal(err.url, "");
+            assert.equal(err.status, 0);
+            assert.deepEqual(err.response, {});
+            assert.equal(err.isAbort, false);
+            assert.equal(err.originalError, err0);
+            assert.include(err.message, "Something went wrong.");
+        });
+
+        test("with DOMException.AbortError", function () {
+            const err0 = new DOMException("test_err", "AbortError");
             const err = new ClientResponseError(err0);
 
             assert.equal(err.url, "");
@@ -76,7 +83,20 @@ describe("ClientResponseError", function () {
             assert.deepEqual(err.response, {});
             assert.equal(err.isAbort, true);
             assert.equal(err.originalError, err0);
-            assert.include(err.message, "request was autocancelled");
+            assert.include(err.message, "request was aborted");
+        });
+
+        // React Native throws a plain Error with message "Aborted" instead of DOMException
+        test("with React Native abort error", function () {
+            const err0 = new Error("Aborted");
+            const err = new ClientResponseError(err0);
+
+            assert.equal(err.url, "");
+            assert.equal(err.status, 0);
+            assert.deepEqual(err.response, {});
+            assert.equal(err.isAbort, true);
+            assert.equal(err.originalError, err0);
+            assert.include(err.message, "request was aborted");
         });
     });
 });

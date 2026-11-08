@@ -182,29 +182,79 @@ describe("Client", function () {
             assert.equal(client.filter(raw), raw);
         });
 
-        test("filter expression with params that does not match the placeholders", function () {
+        test("filter expression with empty params", function () {
+            const client = new Client("test_base_url", null, "test_language_A");
+            const raw = "a > {:test1} && b = {:test2} || c = {:test2}";
+
+            assert.equal(client.filter(raw, {}), raw);
+        });
+
+        test("filter expression with partial params and special regex chars", function () {
             const client = new Client("test_base_url", null, "test_language_A");
             const result = client.filter("a > {:test1} && b = {:test2} || c = {:test2}", {
-                test2: "hello",
+                test0: "abc", // no such placeholder
+                test2: `test$$`, // last chars ensure correct special chars replacement
             });
 
-            assert.equal(result, "a > {:test1} && b = 'hello' || c = 'hello'");
+            assert.equal(result, `a > {:test1} && b = "test$$" || c = "test$$"`);
+        });
+
+        test("filter with param values matching the placeholders (regex chaining)", function () {
+            const client = new Client("test_base_url", null, "test_language_A");
+            const raw = "a > {:test1} && b = {:test2} || c = {:test3}";
+
+            const result = client.filter("a > {:test1} && b = {:test2} || c = {:test3}", {
+                test1: "{:test2}",
+                test2: "{:test1}",
+                test3: "{:test3}",
+            });
+
+            assert.equal(result, `a > "{:test2}" && b = "{:test1}" || c = "{:test3}"`);
         });
 
         test("filter expression with all placeholder types", function () {
             const client = new Client("test_base_url", null, "test_language_A");
 
+            class customStringToJSON {
+                toJSON() {
+                    return 'a"b';
+                }
+            }
+
+            class customNumberToJSON {
+                toJSON() {
+                    return 123;
+                }
+            }
+
+            class customArrayToJSON {
+                toJSON() {
+                    return [1, 'a"b'];
+                }
+            }
+
+            class customObjectToJSON {
+                toJSON() {
+                    return { a: 'a"b' };
+                }
+            }
+
             const params = {
-                test1: "a'b'c'",
+                test0: undefined,
+                test1: "a'b'c'\"\n\\",
                 test2: null,
                 test3: true,
                 test4: false,
                 test5: 123,
                 test6: -123.45,
                 test7: 123.45,
-                test8: new Date("2023-10-18 10:11:12"),
-                test9: [1, 2, 3, "test'123"],
+                test8: new Date("2023-10-18 10:11:12+0300"),
+                test9: [1, 2, 3, "test'12\"3"],
                 test10: { a: "test'123" },
+                test11: new customStringToJSON(),
+                test12: new customNumberToJSON(),
+                test13: new customArrayToJSON(),
+                test14: new customObjectToJSON(),
             };
 
             let raw = "";
@@ -217,7 +267,7 @@ describe("Client", function () {
 
             assert.equal(
                 client.filter(raw, params),
-                `test1='a\\'b\\'c\\'' || test2=null || test3=true || test4=false || test5=123 || test6=-123.45 || test7=123.45 || test8='2023-10-18 07:11:12.000Z' || test9='[1,2,3,"test\\'123"]' || test10='{"a":"test\\'123"}'`,
+                `test0=null || test1="a'b'c'\\"\\n\\\\" || test2=null || test3=true || test4=false || test5=123 || test6=-123.45 || test7=123.45 || test8="2023-10-18 07:11:12.000Z" || test9="[1,2,3,\\"test'12\\\\\\"3\\"]" || test10="{\\"a\\":\\"test'123\\"}" || test11="a\\"b" || test12=123 || test13="[1,\\"a\\\\\\"b\\"]" || test14="{\\"a\\":\\"a\\\\\\"b\\"}"`,
             );
         });
     });
@@ -236,6 +286,10 @@ describe("Client", function () {
             fetchMock.on({
                 method: "POST",
                 url: "test_base_url/123?queryA=456",
+                additionalMatcher: (_, config: any): boolean => {
+                    assert.equal(config.body, `{"test":123}`);
+                    return true;
+                },
                 replyCode: 200,
                 replyBody: "successPost",
             });
@@ -243,6 +297,10 @@ describe("Client", function () {
             fetchMock.on({
                 method: "PUT",
                 url: "test_base_url/123?queryA=456",
+                additionalMatcher: (_, config: any): boolean => {
+                    assert.equal(config.body, `{"test":123}`);
+                    return true;
+                },
                 replyCode: 200,
                 replyBody: "successPut",
             });
@@ -294,6 +352,7 @@ describe("Client", function () {
                     assert.equal(config.body.getAll("files").length, 2);
                     assert.equal(config.body.getAll("files")[0].size, 2);
                     assert.equal(config.body.getAll("files")[1].size, 1);
+                    assert.equal(config.body.has("skip"), false);
 
                     return true;
                 },
@@ -301,28 +360,80 @@ describe("Client", function () {
                 replyBody: "successMultipartAuto",
             });
 
-            const testQueryParams = { queryA: 456, queryB: null, queryC: undefined }
+            const testQueryParams = { queryA: 456, queryB: null, queryC: undefined };
 
             const testCases = [
-                [client.send("/123", Object.assign({ method: "GET" }, testQueryParams)), "successGet"],
-                [client.send("/123", Object.assign({ method: "POST" }, testQueryParams)), "successPost"],
-                [client.send("/123", Object.assign({ method: "PUT" }, testQueryParams)), "successPut"],
-                [client.send("/123", Object.assign({ method: "PATCH" }, testQueryParams)), "successPatch"],
-                [client.send("/123", Object.assign({ method: "DELETE" }, testQueryParams)), "successDelete"],
                 [
-                    client.send("/multipart", Object.assign({ method: "GET", body: new FormData() }, testQueryParams)),
+                    client.send(
+                        "/123",
+                        Object.assign({ method: "GET" }, testQueryParams),
+                    ),
+                    "successGet",
+                ],
+                [
+                    client.send(
+                        "/123",
+                        Object.assign(
+                            { method: "POST", body: { test: 123 } },
+                            testQueryParams,
+                        ),
+                    ),
+                    "successPost",
+                ],
+                [
+                    client.send(
+                        "/123",
+                        Object.assign(
+                            {
+                                method: "PUT",
+                                body: Object.assign(Object.create(null), { test: 123 }),
+                            },
+                            testQueryParams,
+                        ),
+                    ),
+                    "successPut",
+                ],
+                [
+                    client.send(
+                        "/123",
+                        Object.assign({ method: "PATCH" }, testQueryParams),
+                    ),
+                    "successPatch",
+                ],
+                [
+                    client.send(
+                        "/123",
+                        Object.assign({ method: "DELETE" }, testQueryParams),
+                    ),
+                    "successDelete",
+                ],
+                [
+                    client.send(
+                        "/multipart",
+                        Object.assign(
+                            { method: "GET", body: new FormData() },
+                            testQueryParams,
+                        ),
+                    ),
                     "successMultipart",
                 ],
                 [
-                    client.send("/multipartAuto", Object.assign({
-                        method: "GET",
-                        body: {
-                            title: "test",
-                            roles: ["a", "b"],
-                            json: null,
-                            files: [new Blob(["11"]), new Blob(["2"])],
-                        },
-                    }, testQueryParams)),
+                    client.send(
+                        "/multipartAuto",
+                        Object.assign(
+                            {
+                                method: "GET",
+                                body: {
+                                    title: "test",
+                                    roles: ["a", "b"],
+                                    json: null,
+                                    files: [new Blob(["11"]), new Blob(["2"])],
+                                    skip: undefined,
+                                },
+                            },
+                            testQueryParams,
+                        ),
+                    ),
                     "successMultipartAuto",
                 ],
             ];
@@ -504,6 +615,22 @@ describe("Client", function () {
 
             const response = client.send("/async_after", { method: "GET" });
             await expect(response).rejects.toThrow("after_err");
+        });
+
+        test("Should return a wrapped AbortError in case the request is cancelled during the json response resolving", async function () {
+            const client = new Client("test_base_url");
+
+            fetchMock.on({
+                method: "GET",
+                url: "test_base_url/abc",
+                replyCode: 200,
+                replyBody: () => {
+                    throw new DOMException("", "AbortError");
+                },
+            });
+
+            const response = client.send("/abc", { method: "GET" });
+            await expect(response).rejects.toThrow("request was aborted");
         });
     });
 

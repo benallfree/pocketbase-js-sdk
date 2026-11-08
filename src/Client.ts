@@ -9,6 +9,7 @@ import { HealthService } from "@/services/HealthService";
 import { FileService } from "@/services/FileService";
 import { BackupService } from "@/services/BackupService";
 import { CronService } from "@/services/CronService";
+import { SQLService } from "@/services/SQLService";
 import { BatchService } from "@/services/BatchService";
 import { RecordModel } from "@/tools/dtos";
 import {
@@ -26,6 +27,13 @@ type Response = {
     raw: string;
     json: any;
 };
+// @todo remove after upgrading the Node.js dev setup
+if (!((RegExp as any).escape)) {
+    // https://stackoverflow.com/questions/3561493/is-there-a-regexp-escape-function-in-javascript#answer-3561711
+    (RegExp as any).escape = function(str: string): string {
+        return str.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
+    }
+}
 
 export interface BeforeSendResult {
     [key: string]: any; // for backward compatibility
@@ -68,13 +76,17 @@ export default class Client {
      *
      * Example:
      * ```js
-     * client.beforeSend = function (url, options) {
+     * const pb = new PocketBase("https://example.com")
+     *
+     * pb.beforeSend = function (url, options) {
      *     options.headers = Object.assign({}, options.headers, {
      *         'X-Custom-Header': 'example',
-     *     });
+     *     })
      *
      *     return { url, options }
-     * };
+     * }
+     *
+     * // use the created client as usual...
      * ```
      */
     beforeSend?: (url: string, options: SendOptions) => BeforeSendResult;
@@ -87,17 +99,21 @@ export default class Client {
      *
      * Example:
      * ```js
-     * client.afterSend = function (response, data, options) {
+     * const pb = new PocketBase("https://example.com")
+     *
+     * pb.afterSend = function (response, data, options) {
      *     if (response.status != 200) {
      *         throw new ClientResponseError({
      *             url:      response.url,
      *             status:   response.status,
      *             response: { ... },
-     *         });
+     *         })
      *     }
      *
      *     return data;
-     * };
+     * }
+     *
+     * // use the created client as usual...
      * ```
      */
     afterSend?: ((response: Response, data: any) => any) &
@@ -154,6 +170,11 @@ export default class Client {
      */
     readonly crons: CronService;
 
+    /**
+     * An instance of the service that handles the **SQL APIs**.
+     */
+    readonly sql: SQLService;
+
     private recordServices: { [key: string]: RecordService } = {};
 
     constructor(baseURL = "/", authStore?: BaseAuthStore | null, lang = "en-US") {
@@ -177,6 +198,7 @@ export default class Client {
         this.health = new HealthService(this);
         this.backups = new BackupService(this);
         this.crons = new CronService(this);
+        this.sql = new SQLService(this);
     }
 
     /**
@@ -226,11 +248,12 @@ export default class Client {
      *
      * The following parameter values are supported:
      *
-     * - `string` (_single quotes are autoescaped_)
+     * - `string`
      * - `number`
      * - `boolean`
-     * - `Date` object (_stringified into the PocketBase datetime format_)
      * - `null`
+     * - `undefined` (stringified as "null")
+     * - `Date` object (_stringified into the PocketBase datetime format_)
      * - everything else is converted to a string using `JSON.stringify()`
      *
      * Example:
@@ -247,29 +270,44 @@ export default class Client {
             return raw;
         }
 
-        for (let key in params) {
-            let val = params[key];
+        const paramsWithPlaceholders: { [key: string]: any } = {}
+        for (const k in params) {
+            paramsWithPlaceholders["{:" + k + "}"] = params[k]
+        }
+
+        const pattern = Object.keys(paramsWithPlaceholders).map((k) => (RegExp as any).escape(k)).join("|")
+        if (!pattern) {
+            return raw // no params to replace
+        }
+
+        function stringify(val: any): string {
             switch (typeof val) {
                 case "boolean":
                 case "number":
-                    val = "" + val;
-                    break;
+                    return "" + val;
                 case "string":
-                    val = "'" + val.replace(/'/g, "\\'") + "'";
-                    break;
+                    return JSON.stringify(val);
                 default:
-                    if (val === null) {
-                        val = "null";
-                    } else if (val instanceof Date) {
-                        val = "'" + val.toISOString().replace("T", " ") + "'";
-                    } else {
-                        val = "'" + JSON.stringify(val).replace(/'/g, "\\'") + "'";
+                    if (val == null) {
+                        return "null";
                     }
+
+                    if (val instanceof Date) {
+                        return JSON.stringify(val.toISOString().replace("T", " "));
+                    }
+
+                    const stringified = JSON.stringify(val);
+
+                    // wrap in double quotes in case of regular array, object, etc.
+                    if (stringified.startsWith("[") || stringified.startsWith("{")) {
+                        return JSON.stringify(stringified);
+                    }
+
+                    return stringified;
             }
-            raw = raw.replaceAll("{:" + key + "}", val);
         }
 
-        return raw;
+        return raw.replace(new RegExp(pattern, "g"), (match) => stringify(paramsWithPlaceholders[match]))
     }
 
     /**

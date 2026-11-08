@@ -54,6 +54,27 @@ describe("CollectionService", function () {
         });
     });
 
+    describe("truncate()", function () {
+        test("Should send truncate collection request", async function () {
+            fetchMock.on({
+                method: "DELETE",
+                url: service.client.buildURL("/api/collections/test%3D/truncate?q1=456"),
+                additionalMatcher: (_, config) => {
+                    return config?.headers?.["x-test"] === "123";
+                },
+                replyCode: 204,
+                replyBody: true,
+            });
+
+            const result = await service.truncate("test=", {
+                q1: 456,
+                headers: { "x-test": "123" },
+            });
+
+            assert.deepEqual(result, true);
+        });
+    });
+
     describe("getScaffolds()", function () {
         test("Should send collection scaffolds request", async function () {
             fetchMock.on({
@@ -75,24 +96,52 @@ describe("CollectionService", function () {
         });
     });
 
-    describe("truncate()", function () {
-        test("Should send truncate collection request", async function () {
+    describe("getAllOAuth2Providers()", function () {
+        test("Should send OAuth2 providers list request", async function () {
+            const mockReply = [{ name: "test_name", displayName: "", logo: "" }];
+
             fetchMock.on({
-                method: "DELETE",
-                url: service.client.buildURL("/api/collections/test%3D/truncate?q1=456"),
+                method: "GET",
+                url: service.client.buildURL(
+                    "/api/collections/meta/oauth2-providers?q1=456",
+                ),
                 additionalMatcher: (_, config) => {
                     return config?.headers?.["x-test"] === "123";
                 },
-                replyCode: 204,
-                replyBody: true,
+                replyCode: 200,
+                replyBody: mockReply,
             });
 
-            const result = await service.truncate("test=", {
+            const result = await service.getAllOAuth2Providers({
                 q1: 456,
                 headers: { "x-test": "123" },
             });
 
-            assert.deepEqual(result, true);
+            assert.deepEqual(result, mockReply);
+        });
+    });
+
+    describe("dryRunViewQuery()", function () {
+        test("Should send a dry run view query request", async function () {
+            const mockReply = [{ id: 1 }];
+
+            fetchMock.on({
+                method: "POST",
+                url: service.client.buildURL("/api/collections/meta/dry-run-view?q1=456"),
+                body: { query: "test_query" },
+                additionalMatcher: (_, config) => {
+                    return config?.headers?.["x-test"] === "123";
+                },
+                replyCode: 200,
+                replyBody: mockReply,
+            });
+
+            const result = await service.dryRunViewQuery("test_query", {
+                q1: 456,
+                headers: { "x-test": "123" },
+            });
+
+            assert.deepEqual(result, mockReply);
         });
     });
 });

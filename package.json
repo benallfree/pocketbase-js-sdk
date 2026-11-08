@@ -1,5 +1,5 @@
 {
-    "version": "0.25.10004",
+    "version": "0.28.10001",
     "name": "pocketbase-js-sdk-jsvm",
     "description": "PocketBase JavaScript SDK for JSVM",
     "authors": [
@@ -36,7 +36,7 @@
     },
     "scripts": {
         "format": "npx prettier ./src ./tests --write",
-        "build": "rm -rf dist && rollup -c",
+        "build": "rm -rf dist && bun --bun rollup -c",
         "dev": "rollup -c -w",
         "test": "vitest",
         "prepublishOnly": "npm run build"

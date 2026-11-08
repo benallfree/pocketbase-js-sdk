@@ -76,10 +76,19 @@ interface OAuth2Provider {
     clientId: string;
     name: string;
     clientSecret: string;
-    authUrl: string;
-    tokenUrl: string;
-    userApiUrl: string;
+    authURL: string;
+    tokenURL: string;
+    userInfoURL: string;
     displayName: string;
+    logo: string;
+    extra?: {
+        [key: string]: any;
+    };
+}
+interface ConfigurableOAuth2Provider {
+    name: string;
+    displayName: string;
+    logo: string;
 }
 interface OAuth2Config {
     enabled: boolean;
@@ -352,7 +361,7 @@ declare abstract class CrudService<M> extends BaseService {
     }): T;
     /**
      * Returns a promise with all list items batch fetched at once
-     * (by default 500 items per request; to change it set the `batch` query param).
+     * (by default 1000 items per request; to change it set the `batch` query param).
      *
      * You can use the generic T to supply a wrapper type of the crud model.
      *
@@ -672,6 +681,12 @@ declare class CollectionService extends CrudService<CollectionModel> {
      */
     import(collections: Array<CollectionModel>, deleteMissing?: boolean, options?: CommonOptions): boolean;
     /**
+     * Deletes all records associated with the specified collection.
+     *
+     * @throws {ClientResponseError}
+     */
+    truncate(collectionIdOrName: string, options?: CommonOptions): boolean;
+    /**
      * Returns type indexed map with scaffolded collection models
      * populated with their default field values.
      *
@@ -681,11 +696,19 @@ declare class CollectionService extends CrudService<CollectionModel> {
         [key: string]: CollectionModel;
     };
     /**
-     * Deletes all records associated with the specified collection.
+     * Returns a list with all configurable OAuth2 providers.
      *
      * @throws {ClientResponseError}
      */
-    truncate(collectionIdOrName: string, options?: CommonOptions): boolean;
+    getAllOAuth2Providers(options?: CommonOptions): Array<ConfigurableOAuth2Provider>;
+    /**
+     * Executes the specified view query and returns a sample of the resulting records.
+     *
+     * @throws {ClientResponseError}
+     */
+    dryRunViewQuery(query: string, options?: CommonOptions): Array<{
+        [key: string]: any;
+    }>;
 }
 interface HourlyStats {
     total: number;
@@ -712,6 +735,12 @@ declare class LogService extends BaseService {
      * @throws {ClientResponseError}
      */
     getStats(options?: LogStatsOptions): Array<HourlyStats>;
+    /**
+     * Deletes all logs.
+     *
+     * @throws {ClientResponseError}
+     */
+    truncate(options?: CommonOptions): true;
 }
 interface HealthCheckResponse {
     code: number;
@@ -820,6 +849,25 @@ declare class CronService extends BaseService {
      */
     run(jobId: string, options?: CommonOptions): boolean;
 }
+interface SQLResult {
+    execTime: number;
+    affectedRows: number;
+    columns: Array<{
+        name: string;
+        type: string;
+        nullable: boolean;
+    }>;
+    rows: Array<Array<string | null>>;
+}
+declare class SQLService extends BaseService {
+    /**
+     * Executes the specified raw SQL query.
+     * This operation is allowed only for superusers.
+     *
+     * @throws {ClientResponseError}
+     */
+    run(query: string, options?: CommonOptions): SQLResult;
+}
 interface BatchRequest {
     method: string;
     url: string;
@@ -927,13 +975,17 @@ declare class Client {
      *
      * Example:
      * ```js
-     * client.beforeSend = function (url, options) {
+     * const pb = new PocketBase("https://example.com")
+     *
+     * pb.beforeSend = function (url, options) {
      *     options.headers = Object.assign({}, options.headers, {
      *         'X-Custom-Header': 'example',
-     *     });
+     *     })
      *
      *     return { url, options }
-     * };
+     * }
+     *
+     * // use the created client as usual...
      * ```
      */
     beforeSend?: (url: string, options: SendOptions) => BeforeSendResult;
@@ -945,17 +997,21 @@ declare class Client {
      *
      * Example:
      * ```js
-     * client.afterSend = function (response, data, options) {
+     * const pb = new PocketBase("https://example.com")
+     *
+     * pb.afterSend = function (response, data, options) {
      *     if (response.status != 200) {
      *         throw new ClientResponseError({
      *             url:      response.url,
      *             status:   response.status,
      *             response: { ... },
-     *         });
+     *         })
      *     }
      *
      *     return data;
-     * };
+     * }
+     *
+     * // use the created client as usual...
      * ```
      */
     afterSend?: ((response: Response, data: any) => any) & ((response: Response, data: any, options: SendOptions) => any);
@@ -999,6 +1055,10 @@ declare class Client {
      * An instance of the service that handles the **Cron APIs**.
      */
     readonly crons: CronService;
+    /**
+     * An instance of the service that handles the **SQL APIs**.
+     */
+    readonly sql: SQLService;
     private recordServices;
     constructor(baseURL?: string, authStore?: BaseAuthStore | null, lang?: string);
     /**
@@ -1054,11 +1114,12 @@ declare class Client {
      *
      * The following parameter values are supported:
      *
-     * - `string` (_single quotes are autoescaped_)
+     * - `string`
      * - `number`
      * - `boolean`
-     * - `Date` object (_stringified into the PocketBase datetime format_)
      * - `null`
+     * - `undefined` (stringified as "null")
+     * - `Date` object (_stringified into the PocketBase datetime format_)
      * - everything else is converted to a string using `JSON.stringify()`
      *
      * Example:
@@ -1077,11 +1138,12 @@ declare class Client {
      *
      * The following parameter values are supported:
      *
-     * - `string` (_single quotes are autoescaped_)
+     * - `string`
      * - `number`
      * - `boolean`
-     * - `Date` object (_stringified into the PocketBase datetime format_)
      * - `null`
+     * - `undefined` (stringified as "null")
+     * - `Date` object (_stringified into the PocketBase datetime format_)
      * - everything else is converted to a string using `JSON.stringify()`
      *
      * Example:

@@ -1,3 +1,15 @@
+## 0.28.10001
+
+### Minor Changes
+
+-   Synced with upstream PocketBase JS SDK v0.28.1 (from v0.25.1), adapted for the synchronous JSVM `$http.send` client:
+    -   Added `pb.sql.run()`, `pb.logs.truncate()`, `pb.collections.getAllOAuth2Providers()` and `pb.collections.dryRunViewQuery()` (require a PocketBase version that exposes these endpoints)
+    -   `pb.filter()` fixes (custom `toJSON`, Date params, `RegExp.escape` polyfill)
+    -   `pb.files.getURL()` query param serialization no longer relies on `URLSearchParams`
+    -   Default `getFullList()` batch size raised from 500 to 1000
+    -   `ClientResponseError.cause` is now set to the original error
+-   Build now runs rollup under Bun (`rollup-plugin-ts` dependency uses import assertions unsupported by Node 22+)
+
 ## 0.25.10003
 
 ## 0.25.10004
